@@ -2,7 +2,7 @@ const puppeteer = require('puppeteer');
 
 const SALES_BASE     = 'https://app.cardladder.com/sales-history';
 const APP_HOME       = 'https://app.cardladder.com/';
-const FIREBASE_KEY   = 'AIzaSyBqbxgaaGlpeb1F6HRvEW319OcuCsbkAHM';
+const FIREBASE_KEY   = process.env.CARDLADDER_FIREBASE_KEY;
 const FIREBASE_AUTH  = `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${FIREBASE_KEY}`;
 
 // ── Session cache ─────────────────────────────────────────────────────────────
