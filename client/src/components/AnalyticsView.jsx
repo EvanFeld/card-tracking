@@ -44,12 +44,116 @@ function DarkTooltip({ active, payload, label, fmt }) {
   );
 }
 
+const RANGES = ['3M', '6M', '1Y', 'All'];
+
+function filterByRange(history, range) {
+  if (range === 'All') return history;
+  const days   = range === '3M' ? 90 : range === '6M' ? 180 : 365;
+  const cutoff = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
+  return history.filter(d => d.date >= cutoff);
+}
+
+function fmtPct(val) {
+  if (val === null || val === undefined) return '—';
+  const pct = (val * 100).toFixed(2);
+  return `${val >= 0 ? '+' : ''}${pct}%`;
+}
+
+function slugify(name) {
+  return name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+}
+
+function PlayerIndexCard({ data }) {
+  const [range, setRange] = useState('1Y');
+  const filtered = filterByRange(data.indexHistory, range);
+  return (
+    <div id={slugify(data.player)} className="bg-[#161b27] border border-gray-800 rounded-lg p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="text-gray-200 font-medium">{data.player}</div>
+        <div className="flex gap-1">
+          {RANGES.map(r => (
+            <button key={r} onClick={() => setRange(r)}
+              className={`px-2 py-0.5 text-[10px] rounded font-medium transition-colors ${
+                range === r ? 'bg-blue-600 text-white' : 'text-gray-500 hover:text-gray-300'
+              }`}>
+              {r}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="flex gap-6 flex-wrap">
+        <div className="flex flex-col">
+          <span className="text-gray-600 text-xs uppercase tracking-widest leading-none mb-1">Index</span>
+          <span className="text-xl font-semibold font-mono text-gray-200">
+            {data.currentIndex != null ? data.currentIndex.toFixed(2) : '—'}
+          </span>
+        </div>
+        {[
+          { label: 'Daily',     key: 'daily'     },
+          { label: 'Weekly',    key: 'weekly'     },
+          { label: 'Monthly',   key: 'monthly'   },
+          { label: 'Quarterly', key: 'quarterly' },
+        ].map(({ label, key }) => {
+          const val = data.percentChanges[key];
+          const pos = val >= 0;
+          return (
+            <div key={key} className="flex flex-col">
+              <span className="text-gray-600 text-xs uppercase tracking-widest leading-none mb-1">{label}</span>
+              <span className={`text-base font-semibold font-mono ${pos ? 'text-emerald-400' : 'text-red-400'}`}>
+                {fmtPct(val)}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+      {filtered.length < 2 ? (
+        <div className="text-gray-700 text-sm py-4 text-center">Not enough data for selected range</div>
+      ) : (
+        <div className="pt-2 pr-4 pb-0 pl-0">
+          <ResponsiveContainer width="100%" height={180}>
+            <LineChart data={filtered} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#1a2035" vertical={false} />
+              <XAxis
+                dataKey="date"
+                tick={{ fill: '#4b5563', fontSize: 10 }}
+                tickLine={false}
+                axisLine={false}
+                tickFormatter={v => v ? v.slice(5) : ''}
+                interval="preserveStartEnd"
+                tickCount={6}
+              />
+              <YAxis
+                tick={{ fill: '#4b5563', fontSize: 10 }}
+                tickLine={false}
+                axisLine={false}
+                tickFormatter={v => v.toFixed(0)}
+                width={50}
+              />
+              <Tooltip content={<DarkTooltip fmt={v => v.toFixed(2)} />} />
+              <Line
+                type="monotone"
+                dataKey="value"
+                stroke="#3b82f6"
+                strokeWidth={2}
+                dot={false}
+                activeDot={{ r: 4, fill: '#60a5fa' }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function AnalyticsView() {
   const [portfolioHistory, setPortfolioHistory] = useState([]);
   const [topPerformers,    setTopPerformers]    = useState([]);
   const [bySport,          setBySport]          = useState([]);
   const [salesPerf,        setSalesPerf]        = useState(null);
   const [loading,          setLoading]          = useState(true);
+  const [playerIndex,      setPlayerIndex]      = useState([]);
+  const [playerIndexLoading, setPlayerIndexLoading] = useState(true);
 
   useEffect(() => {
     Promise.all([
@@ -63,6 +167,13 @@ export default function AnalyticsView() {
       setBySport(bs.data);
       setSalesPerf(sp.data);
     }).catch(console.error).finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    axios.get('/api/player-index')
+      .then(r => setPlayerIndex(r.data))
+      .catch(console.error)
+      .finally(() => setPlayerIndexLoading(false));
   }, []);
 
   if (loading) {
@@ -220,6 +331,31 @@ export default function AnalyticsView() {
                 <span className={`text-xl font-semibold font-mono leading-tight ${m.color}`}>{m.fmt(m.value)}</span>
               </div>
             ))}
+          </div>
+        )}
+      </section>
+
+      {/* ── Section 5: Player Index ── */}
+      <section>
+        <SectionHead label="Player Index — Card Ladder" />
+        {playerIndexLoading ? (
+          <EmptyState msg="Loading player indexes…" />
+        ) : playerIndex.length === 0 ? (
+          <EmptyState msg="No Card Ladder player data found for your owned cards" />
+        ) : (
+          <div className="space-y-4">
+            <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+              {playerIndex.map(p => (
+                <button
+                  key={p.player}
+                  onClick={() => document.getElementById(slugify(p.player))?.scrollIntoView({ behavior: 'smooth' })}
+                  className="flex-shrink-0 px-3 py-1 text-[11px] font-medium rounded-full bg-[#1e2535] text-gray-400 hover:bg-[#2a3347] hover:text-gray-200 transition-colors border border-gray-700/50 whitespace-nowrap"
+                >
+                  {p.player}
+                </button>
+              ))}
+            </div>
+            {playerIndex.map(p => <PlayerIndexCard key={p.player} data={p} />)}
           </div>
         )}
       </section>

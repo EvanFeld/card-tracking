@@ -24,6 +24,7 @@ app.use('/api/prices', pricesRouter);
 app.use('/api/price-history', priceHistoryRouter);
 app.use('/api/analytics',    analyticsRouter);
 app.use('/api/scanner',      scannerRouter);
+app.use('/api/player-index', require('./routes/playerIndex'));
 
 const server = app.listen(PORT, () => {
   console.log(`CardTracker API running on http://localhost:${PORT}`);
