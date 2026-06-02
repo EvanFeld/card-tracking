@@ -414,36 +414,65 @@ function buildQuery(playerName, cardSet, year, isGraded, grade) {
   return q;
 }
 
-// ── Price extraction — collects up to 3 sale prices and averages them ─────────
+// ── Price extraction — DOM-aware, three strategies, up to 5 prices ───────────
 
 async function extractPrices(page) {
   return page.evaluate(() => {
     function parsePrice(raw) {
       if (!raw) return null;
-      const m = raw.replace(/,/g, '').match(/\$([\d]+\.?\d*)/);
+      const m = String(raw).replace(/,/g, '').match(/\$([\d]+\.?\d*)/);
       const v = m ? parseFloat(m[1]) : null;
       return (v && v > 0.5) ? v : null;
     }
 
-    const text  = document.body.innerText;
-    const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
-    const salePrices = [];
-    let avg30day = null;
+    function dedup(prices) {
+      return prices.filter((p, i) =>
+        prices.findIndex(q => Math.abs(q - p) < 0.01) === i
+      );
+    }
 
-    // Collect up to 3 distinct sale prices (results sorted date-desc)
-    for (const line of lines) {
-      if (salePrices.length >= 3) break;
-      const p = parsePrice(line);
-      if (p && (salePrices.length === 0 || Math.abs(p - salePrices[salePrices.length - 1]) > 0.01)) {
-        salePrices.push(p);
+    const text = document.body.innerText;
+    let salePrices = [];
+
+    // Strategy 1 — CSS selector scan for price-bearing elements
+    const priceSelectors = [
+      '[class*="price"]',
+      '[class*="sale-price"]',
+      '[class*="sold-price"]',
+      '[class*="transaction"] [class*="amount"]',
+      'td[class*="price"]',
+      'span[class*="price"]'
+    ];
+    for (const sel of priceSelectors) {
+      if (salePrices.length >= 5) break;
+      try {
+        document.querySelectorAll(sel).forEach(el => {
+          if (salePrices.length >= 5) return;
+          const p = parsePrice(el.textContent);
+          if (p) salePrices.push(p);
+        });
+      } catch {}
+    }
+    salePrices = dedup(salePrices).slice(0, 5);
+
+    // Strategy 2 — innerText line scan if Strategy 1 found nothing
+    if (salePrices.length === 0) {
+      const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+      for (const line of lines) {
+        if (salePrices.length >= 5) break;
+        const p = parsePrice(line);
+        if (p) salePrices.push(p);
       }
+      salePrices = dedup(salePrices).slice(0, 5);
     }
 
     const recentSale = salePrices.length > 0
       ? Math.round((salePrices.reduce((a, b) => a + b, 0) / salePrices.length) * 100) / 100
       : null;
 
-    // Look for avg / 30-day label
+    // Strategy 3 — avg / 30-day label scan
+    let avg30day = null;
+    const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
     for (let i = 0; i < lines.length; i++) {
       const l = lines[i].toLowerCase();
       if (l.includes('avg') || l.includes('average') || l.includes('30-day') || l.includes('30 day')) {
@@ -455,7 +484,13 @@ async function extractPrices(page) {
       }
     }
 
-    return { recentSale, avg30day, pagePreview: text.slice(0, 1200) };
+    return {
+      recentSale,
+      avg30day,
+      saleCount:      salePrices.length,
+      allPricesFound: salePrices,
+      pagePreview:    text.slice(0, 1200)
+    };
   });
 }
 
@@ -505,18 +540,26 @@ async function fetchCardLadderData(playerName, year, brand, cardSet, isGraded, g
     console.log('[CardLadder] Empty state:', snap.empty, '| Count text:', snap.resultCount ?? '(not detected)');
 
     if (snap.empty) {
-      console.log('[CardLadder] No results — returning null.');
-      return null;
+      if (manualCardLadderUrl) {
+        console.log('[CardLadder] Empty-state heuristic fired on a locked URL — ignoring and continuing to extraction.');
+      } else {
+        console.log('[CardLadder] No results — returning null.');
+        return null;
+      }
     }
 
     const prices = await extractPrices(page);
-    console.log('[CardLadder] recentSale:', prices.recentSale, '| avg30day:', prices.avg30day);
-    console.log('[CardLadder] Page preview:\n' + prices.pagePreview);
+    console.log('[CardLadder] recentSale:', prices.recentSale, '| avg30day:', prices.avg30day,
+                '| saleCount:', prices.saleCount, '| allPricesFound:', prices.allPricesFound);
 
     if (!prices.recentSale && !prices.avg30day) {
-      console.log('[CardLadder] No price extracted.');
+      console.log('[CardLadder] No price extracted. allPricesFound:', prices.allPricesFound);
+      console.log('[CardLadder] Page preview:\n' + prices.pagePreview);
       return null;
     }
+
+    console.log('[CardLadder] Extraction succeeded — saleCount:', prices.saleCount,
+                '| allPricesFound:', prices.allPricesFound, '| recentSale:', prices.recentSale);
 
     const ebayListingUrl = await page.evaluate(() => {
       const saleIdParam = new URLSearchParams(location.search).get('saleId');
