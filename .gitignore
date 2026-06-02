@@ -7,7 +7,9 @@ dist/
 .env
 server/login-*.png
 server/.ebay-cookies.json
+server/services/.ebay-cookies.json
 server/ebay-*.png
+ebay-signin-debug.png
 server/server.log
 server/server.err
 .claude/
