@@ -46,7 +46,7 @@ function PriceTooltip({ active, payload, label }) {
 }
 
 export default function CardDrawer() {
-  const { selectedCard, drawerOpen, closeDrawer, updateCard, deleteCard, sellCard, fetchSummary } = useCardStore();
+  const { selectedCard, drawerOpen, closeDrawer, updateCard, deleteCard, sellCard, fetchSummary, fetchCards } = useCardStore();
 
   const [editing, setEditing]             = useState(false);
   const [form, setForm]                   = useState({});
@@ -145,6 +145,8 @@ export default function CardDrawer() {
       });
       // Refresh price history chart
       await fetchPriceHistory(selectedCard.id);
+      // Sync store state
+      await fetchCards();
       // Update global summary bar
       fetchSummary();
     } catch (err) {
