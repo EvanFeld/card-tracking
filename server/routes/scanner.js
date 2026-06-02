@@ -35,8 +35,17 @@ router.get('/bulk-refresh', async (req, res) => {
     let ebayListingUrl = null;
 
     try {
+      const manualCardLadderUrl = card.card_ladder_url_locked === 1 && card.card_ladder_url
+        ? card.card_ladder_url : null;
+      const ebayUrls = [
+        card.ebay_sale_url_1_locked === 1 && card.ebay_sale_url_1 ? card.ebay_sale_url_1 : null,
+        card.ebay_sale_url_2_locked === 1 && card.ebay_sale_url_2 ? card.ebay_sale_url_2 : null,
+        card.ebay_sale_url_3_locked === 1 && card.ebay_sale_url_3 ? card.ebay_sale_url_3 : null,
+      ].filter(Boolean);
+
       const result = await fetchCardLadderData(
-        card.player_name, card.year, card.brand, card.card_set, card.is_graded, card.grade
+        card.player_name, card.year, card.brand, card.card_set, card.is_graded, card.grade,
+        { manualCardLadderUrl, ebayUrls }
       );
 
       if (!result) {
