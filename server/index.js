@@ -9,6 +9,7 @@ const pricesRouter = require('./routes/prices');
 const priceHistoryRouter = require('./routes/priceHistory');
 const analyticsRouter   = require('./routes/analytics');
 const scannerRouter     = require('./routes/scanner');
+const marketPulseRouter = require('./routes/marketPulse');
 const { closeBrowser } = require('./services/cardladder');
 
 const app = express();
@@ -25,6 +26,7 @@ app.use('/api/price-history', priceHistoryRouter);
 app.use('/api/analytics',    analyticsRouter);
 app.use('/api/scanner',      scannerRouter);
 app.use('/api/player-index', require('./routes/playerIndex'));
+app.use('/api/market-pulse', marketPulseRouter);
 
 const server = app.listen(PORT, () => {
   console.log(`CardTracker API running on http://localhost:${PORT}`);

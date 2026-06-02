@@ -154,6 +154,7 @@ export default function AnalyticsView() {
   const [loading,          setLoading]          = useState(true);
   const [playerIndex,      setPlayerIndex]      = useState([]);
   const [playerIndexLoading, setPlayerIndexLoading] = useState(true);
+  const [marketPulse,      setMarketPulse]      = useState([]);
 
   useEffect(() => {
     Promise.all([
@@ -176,6 +177,12 @@ export default function AnalyticsView() {
       .finally(() => setPlayerIndexLoading(false));
   }, []);
 
+  useEffect(() => {
+    axios.get('/api/market-pulse')
+      .then(r => setMarketPulse(r.data))
+      .catch(console.error);
+  }, []);
+
   if (loading) {
     return (
       <div className="h-full flex items-center justify-center bg-[#0d1120]">
@@ -188,6 +195,46 @@ export default function AnalyticsView() {
 
   return (
     <div className="bg-[#0d1120] px-6 py-5 space-y-8">
+
+      {/* ── Section 0: Market Pulse ── */}
+      <section>
+        <SectionHead label="Market Pulse — Monthly" />
+        {marketPulse.length === 0 ? (
+          <EmptyState msg="Loading market data…" />
+        ) : (
+          <div className="flex gap-3 flex-wrap">
+            {marketPulse.map(s => {
+              const pct    = s.monthlyPct;
+              const pos    = pct >= 0;
+              const pctCls = pos ? 'text-emerald-400' : 'text-red-400';
+              const bgCls  = pos ? 'border-emerald-800/30 bg-emerald-900/10' : 'border-red-800/30 bg-red-900/10';
+              const sales  = s.dailySales != null
+                ? s.dailySales >= 1000
+                  ? `$${(s.dailySales / 1000).toFixed(0)}k vol`
+                  : `$${s.dailySales.toFixed(0)} vol`
+                : null;
+              return (
+                <div key={s.sport}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-lg border ${bgCls} min-w-[180px] flex-1`}>
+                  <span className="text-2xl leading-none">{s.emoji}</span>
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-gray-400 text-xs font-medium">{s.label}</span>
+                    <span className={`text-lg font-bold font-mono leading-tight ${pctCls}`}>
+                      {pos ? '+' : ''}{(pct * 100).toFixed(2)}%
+                    </span>
+                    {s.dailyIndex != null && (
+                      <span className="text-gray-600 text-[11px] font-mono leading-none mt-0.5">
+                        idx {s.dailyIndex.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                        {sales ? ` · ${sales}` : ''}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
 
       {/* ── Section 1: Portfolio Value Over Time ── */}
       <section>
