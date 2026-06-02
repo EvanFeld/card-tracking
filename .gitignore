@@ -6,6 +6,8 @@ dist/
 .DS_Store
 .env
 server/login-*.png
+server/.ebay-cookies.json
+server/ebay-*.png
 server/server.log
 server/server.err
 .claude/

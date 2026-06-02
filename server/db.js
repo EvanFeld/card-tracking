@@ -65,4 +65,16 @@ db.exec(`
   );
 `);
 
+try { db.exec('ALTER TABLE price_history ADD COLUMN card_ladder_url TEXT'); } catch {}
+try { db.exec('ALTER TABLE price_history ADD COLUMN ebay_listing_url TEXT'); } catch {}
+
+try { db.exec('ALTER TABLE cards ADD COLUMN card_ladder_url TEXT'); } catch {}
+try { db.exec('ALTER TABLE cards ADD COLUMN card_ladder_url_locked INTEGER DEFAULT 0'); } catch {}
+try { db.exec('ALTER TABLE cards ADD COLUMN ebay_sale_url_1 TEXT'); } catch {}
+try { db.exec('ALTER TABLE cards ADD COLUMN ebay_sale_url_1_locked INTEGER DEFAULT 0'); } catch {}
+try { db.exec('ALTER TABLE cards ADD COLUMN ebay_sale_url_2 TEXT'); } catch {}
+try { db.exec('ALTER TABLE cards ADD COLUMN ebay_sale_url_2_locked INTEGER DEFAULT 0'); } catch {}
+try { db.exec('ALTER TABLE cards ADD COLUMN ebay_sale_url_3 TEXT'); } catch {}
+try { db.exec('ALTER TABLE cards ADD COLUMN ebay_sale_url_3_locked INTEGER DEFAULT 0'); } catch {}
+
 module.exports = db;

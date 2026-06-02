@@ -4,6 +4,7 @@ import CollectionView from './components/CollectionView';
 import LedgerView from './components/LedgerView';
 import WatchlistView from './components/WatchlistView';
 import AnalyticsView from './components/AnalyticsView';
+import ScannerView from './components/ScannerView';
 import useCardStore from './store/cardStore';
 
 export default function App() {
@@ -21,6 +22,7 @@ export default function App() {
       {page === 'ledger'     && <LedgerView />}
       {page === 'watchlist'  && <WatchlistView />}
       {page === 'analytics'  && <AnalyticsView />}
+      {page === 'scanner'    && <ScannerView />}
     </Layout>
   );
 }

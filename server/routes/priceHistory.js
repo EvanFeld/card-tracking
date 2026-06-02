@@ -5,7 +5,7 @@ const db = require('../db');
 // GET /api/price-history/:cardId
 router.get('/:cardId', (req, res) => {
   const rows = db.prepare(`
-    SELECT id, card_id, date, price, source
+    SELECT id, card_id, date, price, source, card_ladder_url, ebay_listing_url
     FROM price_history
     WHERE card_id = ?
     ORDER BY date ASC

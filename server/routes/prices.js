@@ -10,13 +10,25 @@ router.post('/refresh/:id', async (req, res) => {
 
   console.log(`[prices] Refreshing price for card #${card.id}: ${card.player_name}`);
 
+  const manualCardLadderUrl = card.card_ladder_url_locked === 1 && card.card_ladder_url
+    ? card.card_ladder_url : null;
+
+  const ebayUrls = [
+    card.ebay_sale_url_1_locked === 1 && card.ebay_sale_url_1 ? card.ebay_sale_url_1 : null,
+    card.ebay_sale_url_2_locked === 1 && card.ebay_sale_url_2 ? card.ebay_sale_url_2 : null,
+    card.ebay_sale_url_3_locked === 1 && card.ebay_sale_url_3 ? card.ebay_sale_url_3 : null,
+  ].filter(Boolean);
+
+  console.log(`[prices] manualCardLadderUrl: ${manualCardLadderUrl ?? '(auto)'} | ebayUrls: ${ebayUrls.length}`);
+
   const result = await fetchCardLadderData(
     card.player_name,
     card.year,
     card.brand,
     card.card_set,
     card.is_graded,
-    card.grade
+    card.grade,
+    { manualCardLadderUrl, ebayUrls }
   );
 
   if (!result) {
@@ -34,9 +46,9 @@ router.post('/refresh/:id', async (req, res) => {
 
   // Insert into price_history
   db.prepare(`
-    INSERT INTO price_history (card_id, date, price, source)
-    VALUES (?, ?, ?, 'cardladder')
-  `).run(card.id, today, result.recentSale ?? result.avg30day);
+    INSERT INTO price_history (card_id, date, price, source, card_ladder_url, ebay_listing_url)
+    VALUES (?, ?, ?, 'cardladder', ?, ?)
+  `).run(card.id, today, result.recentSale ?? result.avg30day, result.cardLadderUrl ?? null, result.ebayListingUrl ?? null);
 
   const updated = db.prepare('SELECT * FROM cards WHERE id = ?').get(card.id);
   res.json({ card: updated, priceData: result });

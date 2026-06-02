@@ -58,7 +58,8 @@ export default function CardDrawer() {
   // Price refresh state
   const [refreshing, setRefreshing]       = useState(false);
   const [refreshError, setRefreshError]   = useState(null);
-  const [liveCard, setLiveCard]           = useState(null); // updated card after refresh
+  const [liveCard, setLiveCard]           = useState(null);
+  const [sourceUrls, setSourceUrls]       = useState({ cardLadderUrl: null, ebayListingUrl: null });
 
   // Price history state
   const [priceHistory, setPriceHistory]   = useState([]);
@@ -72,6 +73,7 @@ export default function CardDrawer() {
       setDeleteConfirm(false);
       setRefreshError(null);
       setLiveCard(null);
+      setSourceUrls({ cardLadderUrl: null, ebayListingUrl: null });
       setSaleForm({ sale_price: '', sale_date: new Date().toISOString().split('T')[0], platform: '' });
       // Fetch price history whenever a card is selected
       fetchPriceHistory(selectedCard.id);
@@ -124,12 +126,23 @@ export default function CardDrawer() {
     closeDrawer();
   };
 
+  const handleLockToggle = async (lockField) => {
+    const currentData = liveCard || selectedCard;
+    const newVal = currentData[lockField] ? 0 : 1;
+    setLiveCard({ ...currentData, [lockField]: newVal });
+    await updateCard(selectedCard.id, { [lockField]: newVal });
+  };
+
   const handleRefreshPrice = async () => {
     setRefreshing(true);
     setRefreshError(null);
     try {
       const res = await axios.post(`/api/prices/refresh/${selectedCard.id}`);
       setLiveCard(res.data.card);
+      setSourceUrls({
+        cardLadderUrl:  res.data.priceData?.cardLadderUrl  ?? null,
+        ebayListingUrl: res.data.priceData?.ebayListingUrl ?? null
+      });
       // Refresh price history chart
       await fetchPriceHistory(selectedCard.id);
       // Update global summary bar
@@ -403,6 +416,58 @@ export default function CardDrawer() {
               </div>
             )}
 
+            {/* ── Source Links ── */}
+            {(() => {
+              const SOURCE_LINKS = [
+                { urlField: 'card_ladder_url',  lockField: 'card_ladder_url_locked',  label: 'Card Ladder' },
+                { urlField: 'ebay_sale_url_1',  lockField: 'ebay_sale_url_1_locked',  label: 'eBay Sale 1' },
+                { urlField: 'ebay_sale_url_2',  lockField: 'ebay_sale_url_2_locked',  label: 'eBay Sale 2' },
+                { urlField: 'ebay_sale_url_3',  lockField: 'ebay_sale_url_3_locked',  label: 'eBay Sale 3' },
+              ];
+              return (
+                <div className="mt-4">
+                  <div className="text-gray-600 text-[11px] uppercase tracking-widest mb-2">Source Links</div>
+                  <div className="space-y-2">
+                    {SOURCE_LINKS.map(({ urlField, lockField, label }) => {
+                      const urlVal = data[urlField] || '';
+                      const locked = data[lockField] ? 1 : 0;
+                      return (
+                        <div key={urlField} className="flex items-center gap-2">
+                          <span className="text-gray-600 text-[11px] w-20 flex-shrink-0">{label}</span>
+                          {editing ? (
+                            <input
+                              className="bg-[#0d1120] border border-gray-700 rounded px-2 py-1 text-xs text-gray-300 focus:outline-none focus:border-blue-500 flex-1 min-w-0"
+                              value={urlVal}
+                              onChange={e => upd(urlField, e.target.value)}
+                              placeholder="https://..."
+                            />
+                          ) : (
+                            <div className="flex-1 min-w-0">
+                              {urlVal ? (
+                                <a href={urlVal} target="_blank" rel="noopener noreferrer"
+                                  className="text-blue-400 hover:text-blue-300 text-xs underline truncate block">
+                                  {urlVal}
+                                </a>
+                              ) : (
+                                <span className="text-gray-700 text-xs">—</span>
+                              )}
+                            </div>
+                          )}
+                          <button
+                            onClick={() => editing ? upd(lockField, locked ? 0 : 1) : handleLockToggle(lockField)}
+                            className="flex-shrink-0 text-sm leading-none p-1 rounded hover:bg-gray-800 transition-colors"
+                            title={locked ? 'Locked — click to unlock' : 'Unlocked — click to lock'}
+                          >
+                            {locked ? '🔒' : '🔓'}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── Refresh Price (Card Ladder) ── */}
             {!editing && (
               <div className="mt-4">
@@ -438,7 +503,26 @@ export default function CardDrawer() {
 
                 {liveCard && !refreshError && (
                   <div className="mt-2 text-xs text-emerald-400 bg-emerald-900/20 border border-emerald-800/30 rounded px-3 py-2">
-                    Updated — value set to ${Number(liveCard.current_value).toFixed(2)}
+                    <div>Updated — value set to ${Number(liveCard.current_value).toFixed(2)}</div>
+                    {(sourceUrls.cardLadderUrl || sourceUrls.ebayListingUrl) && (
+                      <div className="mt-1 flex items-center gap-1 flex-wrap">
+                        {sourceUrls.cardLadderUrl && (
+                          <a href={sourceUrls.cardLadderUrl} target="_blank" rel="noopener noreferrer"
+                            className="text-blue-400 hover:text-blue-300 underline text-xs">
+                            ↗ Card Ladder Results
+                          </a>
+                        )}
+                        {sourceUrls.cardLadderUrl && sourceUrls.ebayListingUrl && (
+                          <span className="text-gray-600">·</span>
+                        )}
+                        {sourceUrls.ebayListingUrl && (
+                          <a href={sourceUrls.ebayListingUrl} target="_blank" rel="noopener noreferrer"
+                            className="text-blue-400 hover:text-blue-300 underline text-xs">
+                            ↗ eBay Sold Listing
+                          </a>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

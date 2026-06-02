@@ -2,7 +2,8 @@ const NAV_ITEMS = [
   { id: 'collection', label: 'Collection',   icon: '▤' },
   { id: 'ledger',     label: 'Sales Ledger', icon: '$' },
   { id: 'watchlist',  label: 'Watchlist',    icon: '◎' },
-  { id: 'analytics',  label: 'Analytics',    icon: '▲' }
+  { id: 'analytics',  label: 'Analytics',    icon: '▲' },
+  { id: 'scanner',    label: 'Scanner',      icon: '⚡' }
 ];
 
 export default function Nav({ page, setPage }) {

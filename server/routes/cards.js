@@ -112,9 +112,16 @@ router.put('/:id', (req, res) => {
     'player_name', 'year', 'brand', 'card_set', 'card_number', 'sport', 'parallel',
     'serial_number', 'is_auto', 'is_mem', 'is_numbered', 'is_graded', 'grading_company',
     'grade', 'raw_condition', 'purchase_price', 'purchase_date', 'purchased_from',
-    'current_value', 'last_price_check', 'status', 'notes', 'image_url'
+    'current_value', 'last_price_check', 'status', 'notes', 'image_url',
+    'card_ladder_url', 'card_ladder_url_locked',
+    'ebay_sale_url_1', 'ebay_sale_url_1_locked',
+    'ebay_sale_url_2', 'ebay_sale_url_2_locked',
+    'ebay_sale_url_3', 'ebay_sale_url_3_locked'
   ];
-  const boolFields = new Set(['is_auto', 'is_mem', 'is_numbered', 'is_graded']);
+  const boolFields = new Set([
+    'is_auto', 'is_mem', 'is_numbered', 'is_graded',
+    'card_ladder_url_locked', 'ebay_sale_url_1_locked', 'ebay_sale_url_2_locked', 'ebay_sale_url_3_locked'
+  ]);
 
   const updates = {};
   for (const f of allFields) {

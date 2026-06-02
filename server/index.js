@@ -1,4 +1,4 @@
-require('dotenv').config();
+require('dotenv').config({ path: require('path').join(__dirname, '.env') });
 const express = require('express');
 const cors = require('cors');
 
@@ -8,6 +8,7 @@ const watchlistRouter = require('./routes/watchlist');
 const pricesRouter = require('./routes/prices');
 const priceHistoryRouter = require('./routes/priceHistory');
 const analyticsRouter   = require('./routes/analytics');
+const scannerRouter     = require('./routes/scanner');
 const { closeBrowser } = require('./services/cardladder');
 
 const app = express();
@@ -22,6 +23,7 @@ app.use('/api/watchlist', watchlistRouter);
 app.use('/api/prices', pricesRouter);
 app.use('/api/price-history', priceHistoryRouter);
 app.use('/api/analytics',    analyticsRouter);
+app.use('/api/scanner',      scannerRouter);
 
 const server = app.listen(PORT, () => {
   console.log(`CardTracker API running on http://localhost:${PORT}`);
