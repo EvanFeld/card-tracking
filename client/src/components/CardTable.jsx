@@ -37,27 +37,28 @@ function plData(purchase, current) {
 }
 
 const COLS = [
-  { key: 'player_name',  label: 'Player',      align: 'left' },
-  { key: 'year',         label: 'Year',         align: 'right' },
-  { key: 'brand',        label: 'Brand',        align: 'left' },
-  { key: 'card_set',     label: 'Set',          align: 'left' },
-  { key: 'card_number',  label: '#',            align: 'right' },
-  { key: 'sport',        label: 'Sport',        align: 'center' },
-  { key: 'grade_display',label: 'Grade / Cond', align: 'left' },
-  { key: 'purchase_price', label: 'Cost',       align: 'right' },
-  { key: 'current_value',  label: 'Value',      align: 'right' },
-  { key: 'pl',           label: 'P&L',          align: 'right' },
-  { key: 'status',       label: 'Status',       align: 'left' }
+  { key: 'player_name',    label: 'Player',      align: 'left'   },
+  { key: 'year',           label: 'Year',         align: 'right'  },
+  { key: 'brand',          label: 'Brand',        align: 'left'   },
+  { key: 'card_set',       label: 'Set',          align: 'left'   },
+  { key: 'parallel',       label: 'Parallel',     align: 'left'   },
+  { key: 'card_number',    label: '#',            align: 'right'  },
+  { key: 'sport',          label: 'Sport',        align: 'center' },
+  { key: 'grade_display',  label: 'Grade / Cond', align: 'left'   },
+  { key: 'purchase_price', label: 'Cost',         align: 'right'  },
+  { key: 'current_value',  label: 'Value',        align: 'right'  },
+  { key: 'pl',             label: 'P&L',          align: 'right'  },
 ];
 
 const WHATNOT_COLS = [
-  { key: 'player_name',   label: 'Player', align: 'left'   },
-  { key: 'year',          label: 'Year',   align: 'right'  },
-  { key: 'brand',         label: 'Brand',  align: 'left'   },
-  { key: 'card_set',      label: 'Set',    align: 'left'   },
-  { key: 'card_number',   label: '#',      align: 'right'  },
-  { key: 'sport',         label: 'Sport',  align: 'center' },
-  { key: 'current_value', label: 'Value',  align: 'right'  },
+  { key: 'player_name',   label: 'Player',   align: 'left'   },
+  { key: 'year',          label: 'Year',     align: 'right'  },
+  { key: 'brand',         label: 'Brand',    align: 'left'   },
+  { key: 'card_set',      label: 'Set',      align: 'left'   },
+  { key: 'parallel',      label: 'Parallel', align: 'left'   },
+  { key: 'card_number',   label: '#',        align: 'right'  },
+  { key: 'sport',         label: 'Sport',    align: 'center' },
+  { key: 'current_value', label: 'Value',    align: 'right'  },
 ];
 
 const ALIGN = { left: 'text-left', right: 'text-right', center: 'text-center' };
@@ -162,6 +163,7 @@ export default function CardTable() {
                 <td className="px-3 py-2 text-gray-500 font-mono text-right">{card.year || '—'}</td>
                 <td className="px-3 py-2 text-gray-400">{card.brand || '—'}</td>
                 <td className="px-3 py-2 text-gray-500 max-w-[140px] truncate" title={card.card_set}>{card.card_set || '—'}</td>
+                <td className="px-3 py-2 text-gray-400 text-xs italic max-w-[120px] truncate" title={card.parallel}>{card.parallel || <span className="text-gray-800">—</span>}</td>
                 <td className="px-3 py-2 text-gray-600 font-mono text-xs text-right">{card.card_number ? `#${card.card_number}` : '—'}</td>
                 {sportCell}
                 {!isWhatnotView && (
@@ -177,14 +179,7 @@ export default function CardTable() {
                 )}
                 <td className="px-3 py-2 text-gray-100 font-mono font-semibold text-right">{fmtMoney(card.current_value)}</td>
                 {!isWhatnotView && (
-                  <>
-                    <td className={`px-3 py-2 font-mono text-xs text-right ${pl.cls}`}>{pl.text}</td>
-                    <td className="px-3 py-2">
-                      <span className={`text-xs font-medium capitalize ${STATUS_PILL[card.status] || 'text-gray-500'}`}>
-                        {STATUS_LABEL[card.status] || card.status}
-                      </span>
-                    </td>
-                  </>
+                  <td className={`px-3 py-2 font-mono text-xs text-right ${pl.cls}`}>{pl.text}</td>
                 )}
               </tr>
             );

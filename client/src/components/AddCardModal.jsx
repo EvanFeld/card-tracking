@@ -126,17 +126,15 @@ export default function AddCardModal({ onClose }) {
                 </select>
               </F>
 
+              <F label="Parallel">
+                <input className={inp} value={form.parallel}
+                  onChange={e => upd('parallel', e.target.value)} placeholder="Gold, Refractor…" />
+              </F>
               {!quickAdd && (
-                <>
-                  <F label="Parallel">
-                    <input className={inp} value={form.parallel}
-                      onChange={e => upd('parallel', e.target.value)} placeholder="Gold, Refractor…" />
-                  </F>
-                  <F label="Serial #">
-                    <input className={inp} value={form.serial_number}
-                      onChange={e => upd('serial_number', e.target.value)} placeholder="/99, 1/1" />
-                  </F>
-                </>
+                <F label="Serial #">
+                  <input className={inp} value={form.serial_number}
+                    onChange={e => upd('serial_number', e.target.value)} placeholder="/99, 1/1" />
+                </F>
               )}
             </div>
           </div>
