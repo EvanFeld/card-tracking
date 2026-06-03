@@ -46,11 +46,18 @@ router.get('/', async (req, res) => {
       const data = unwrapMap(fields[sport]);
       return {
         sport,
-        label:      SPORT_META[sport].label,
-        emoji:      SPORT_META[sport].emoji,
-        dailyIndex: data.dailyIndex            ?? null,
-        monthlyPct: data.monthlyPercentChange  ?? null,
-        dailySales: data.dailySales            ?? null,
+        label:                  SPORT_META[sport].label,
+        emoji:                  SPORT_META[sport].emoji,
+        dailyIndex:             data.dailyIndex              ?? null,
+        dailySales:             data.dailySales              ?? null,
+        totalCards:             data.totalCards              ?? null,
+        weeklyPercentChange:    data.weeklyPercentChange     ?? null,
+        monthlyPercentChange:   data.monthlyPercentChange    ?? null,
+        quarterlyPercentChange: data.quarterlyPercentChange  ?? null,
+        halfAnnualPercentChange:data.halfAnnualPercentChange ?? null,
+        annualPercentChange:    data.annualPercentChange     ?? null,
+        yearToDatePercentChange:data.yearToDatePercentChange ?? null,
+        allTimePercentChange:   data.allTimePercentChange    ?? null,
       };
     });
 

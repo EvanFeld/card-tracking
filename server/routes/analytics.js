@@ -1,6 +1,8 @@
 const express = require('express');
 const router  = express.Router();
 const db      = require('../db');
+const { getToken }                               = require('../services/firebaseAuth');
+const { unwrapFsField, buildFlags, fetchPlayerDoc } = require('../utils/firestore');
 
 // GET /api/analytics/portfolio-history
 router.get('/portfolio-history', (req, res) => {
@@ -160,6 +162,38 @@ router.get('/whatnot-ammo', (req, res) => {
   } catch (err) {
     console.error('[analytics] whatnot-ammo error:', err.message);
     res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/analytics/player-market/:playerName
+router.get('/player-market/:playerName', async (req, res) => {
+  let token;
+  try {
+    token = await getToken();
+  } catch (err) {
+    return res.status(503).json({ error: 'Firebase auth failed' });
+  }
+
+  const playerName = req.params.playerName;
+  try {
+    const f = await fetchPlayerDoc(token, playerName);
+    if (!f) return res.json({ notFound: true });
+
+    res.json({
+      player:                  playerName,
+      category:                unwrapFsField(f.category)               ?? '',
+      currentIndex:            unwrapFsField(f.dailyIndex),
+      dailySales:              unwrapFsField(f.dailySales)             ?? 0,
+      weeklyPercentChange:     unwrapFsField(f.weeklyPercentChange)    ?? 0,
+      monthlyPercentChange:    unwrapFsField(f.monthlyPercentChange)   ?? 0,
+      quarterlyPercentChange:  unwrapFsField(f.quarterlyPercentChange) ?? 0,
+      halfAnnualPercentChange: unwrapFsField(f.halfAnnualPercentChange)?? 0,
+      annualPercentChange:     unwrapFsField(f.annualPercentChange)    ?? 0,
+      flags:                   buildFlags(f),
+    });
+  } catch (err) {
+    console.error(`[player-market] ${playerName}:`, err.message);
+    res.json({ notFound: true });
   }
 });
 

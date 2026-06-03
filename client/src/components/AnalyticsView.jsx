@@ -16,6 +16,17 @@ const WHATNOT_YELLOW = '#eab308';
 
 const BAR_COLORS = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444'];
 
+const MARKET_TIMEFRAMES = [
+  { key: 'daily',     label: 'Daily',    field: 'weeklyPercentChange'     },
+  { key: 'weekly',    label: 'Weekly',   field: 'weeklyPercentChange'     },
+  { key: 'monthly',   label: 'Monthly',  field: 'monthlyPercentChange'    },
+  { key: 'quarterly', label: 'Quarterly',field: 'quarterlyPercentChange'  },
+  { key: '6month',    label: '6 Month',  field: 'halfAnnualPercentChange' },
+  { key: 'annual',    label: 'Annual',   field: 'annualPercentChange'     },
+  { key: 'ytd',       label: 'YTD',      field: 'yearToDatePercentChange' },
+  { key: 'alltime',   label: 'All Time', field: 'allTimePercentChange'    },
+];
+
 function fmtMoney(val) {
   if (val === null || val === undefined) return '—';
   const abs  = Math.abs(val);
@@ -165,6 +176,7 @@ export default function AnalyticsView() {
   const [playerIndex,        setPlayerIndex]        = useState([]);
   const [playerIndexLoading, setPlayerIndexLoading] = useState(true);
   const [marketPulse,        setMarketPulse]        = useState([]);
+  const [selectedTimeframe,  setSelectedTimeframe]  = useState('monthly');
 
   useEffect(() => {
     Promise.all([
@@ -203,48 +215,69 @@ export default function AnalyticsView() {
     );
   }
 
-  const moneyFmt = v => `$${Number(v).toFixed(2)}`;
+  const moneyFmt   = v => `$${Number(v).toFixed(2)}`;
+  const activeTf   = MARKET_TIMEFRAMES.find(t => t.key === selectedTimeframe) || MARKET_TIMEFRAMES[2];
+  const sortedPulse = [...marketPulse].sort((a, b) => (b[activeTf.field] ?? 0) - (a[activeTf.field] ?? 0));
 
   return (
     <div className="bg-[#0d1120] px-6 py-5 space-y-8">
 
       {/* ── Section 0: Market Pulse ── */}
       <section>
-        <SectionHead label="Market Pulse — Monthly" />
+        <SectionHead label="Market Pulse" />
         {marketPulse.length === 0 ? (
           <EmptyState msg="Loading market data…" />
         ) : (
-          <div className="flex gap-3 flex-wrap">
-            {marketPulse.map(s => {
-              const pct    = s.monthlyPct;
-              const pos    = pct >= 0;
-              const pctCls = pos ? 'text-emerald-400' : 'text-red-400';
-              const bgCls  = pos ? 'border-emerald-800/30 bg-emerald-900/10' : 'border-red-800/30 bg-red-900/10';
-              const sales  = s.dailySales != null
-                ? s.dailySales >= 1000
-                  ? `$${(s.dailySales / 1000).toFixed(0)}k vol`
-                  : `$${s.dailySales.toFixed(0)} vol`
-                : null;
-              return (
-                <div key={s.sport}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-lg border ${bgCls} min-w-[180px] flex-1`}>
-                  <span className="text-2xl leading-none">{s.emoji}</span>
-                  <div className="flex flex-col min-w-0">
-                    <span className="text-gray-400 text-xs font-medium">{s.label}</span>
-                    <span className={`text-lg font-bold font-mono leading-tight ${pctCls}`}>
-                      {pos ? '+' : ''}{(pct * 100).toFixed(2)}%
-                    </span>
-                    {s.dailyIndex != null && (
-                      <span className="text-gray-600 text-[11px] font-mono leading-none mt-0.5">
-                        idx {s.dailyIndex.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                        {sales ? ` · ${sales}` : ''}
+          <>
+            <div className="flex gap-1 flex-wrap mb-3">
+              {MARKET_TIMEFRAMES.map(tf => (
+                <button
+                  key={tf.key}
+                  onClick={() => setSelectedTimeframe(tf.key)}
+                  className={`px-2.5 py-1 text-[11px] rounded font-medium transition-colors ${
+                    selectedTimeframe === tf.key
+                      ? 'bg-blue-600/30 text-blue-300 border border-blue-500/40'
+                      : 'text-gray-600 hover:text-gray-400 border border-transparent hover:border-gray-800'
+                  }`}
+                >
+                  {tf.label}
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-3 flex-wrap">
+              {sortedPulse.map(s => {
+                const pct    = s[activeTf.field] ?? null;
+                const pos    = pct != null ? pct >= 0 : true;
+                const pctCls = pct != null ? (pos ? 'text-emerald-400' : 'text-red-400') : 'text-gray-600';
+                const bgCls  = pct != null
+                  ? (pos ? 'border-emerald-800/30 bg-emerald-900/10' : 'border-red-800/30 bg-red-900/10')
+                  : 'border-gray-800/40';
+                const sales  = s.dailySales != null
+                  ? s.dailySales >= 1000
+                    ? `$${(s.dailySales / 1000).toFixed(0)}k vol`
+                    : `$${s.dailySales.toFixed(0)} vol`
+                  : null;
+                return (
+                  <div key={s.sport}
+                    className={`flex items-center gap-3 px-4 py-3 rounded-lg border ${bgCls} min-w-[180px] flex-1`}>
+                    <span className="text-2xl leading-none">{s.emoji}</span>
+                    <div className="flex flex-col min-w-0">
+                      <span className="text-gray-400 text-xs font-medium">{s.label}</span>
+                      <span className={`text-lg font-bold font-mono leading-tight ${pctCls}`}>
+                        {pct != null ? `${pos ? '+' : ''}${(pct * 100).toFixed(2)}%` : '—'}
                       </span>
-                    )}
+                      {s.dailyIndex != null && (
+                        <span className="text-gray-600 text-[11px] font-mono leading-none mt-0.5">
+                          idx {s.dailyIndex.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                          {sales ? ` · ${sales}` : ''}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          </>
         )}
       </section>
 

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import useCardStore from '../store/cardStore';
 
 const STATUS_PILL = {
@@ -59,7 +59,17 @@ const WHATNOT_COLS = [
   { key: 'card_number',   label: '#',        align: 'right'  },
   { key: 'sport',         label: 'Sport',    align: 'center' },
   { key: 'current_value', label: 'Value',    align: 'right'  },
+  { key: 'signal',        label: 'Signal',   align: 'center' },
 ];
+
+const FLAG_PRIORITY = ['volume_spike', 'breakout', 'undervalued', 'dip_buy', 'sell_pressure'];
+const FLAG_COLORS = {
+  yellow: 'bg-yellow-400/15 text-yellow-400 border border-yellow-400/30',
+  green:  'bg-emerald-400/15 text-emerald-400 border border-emerald-400/30',
+  blue:   'bg-blue-400/15 text-blue-400 border border-blue-400/30',
+  red:    'bg-red-400/15 text-red-400 border border-red-400/30',
+  purple: 'bg-purple-400/15 text-purple-400 border border-purple-400/30',
+};
 
 const ALIGN = { left: 'text-left', right: 'text-right', center: 'text-center' };
 
@@ -68,6 +78,19 @@ export default function CardTable() {
   const isWhatnotView = filters.status === 'whatnot';
   const [sortKey, setSortKey] = useState('created_at');
   const [sortDir, setSortDir] = useState('desc');
+
+  const [whatnotSignals, setWhatnotSignals] = useState(null);
+  const [signalsLoading, setSignalsLoading] = useState(false);
+
+  useEffect(() => {
+    if (!isWhatnotView || whatnotSignals !== null) return;
+    setSignalsLoading(true);
+    fetch('/api/scanner/whatnot-signals')
+      .then(r => r.json())
+      .then(setWhatnotSignals)
+      .catch(() => setWhatnotSignals({}))
+      .finally(() => setSignalsLoading(false));
+  }, [isWhatnotView, whatnotSignals]);
 
   const handleSort = (key) => {
     if (sortKey === key) {
@@ -109,15 +132,21 @@ export default function CardTable() {
             {(isWhatnotView ? WHATNOT_COLS : COLS).map(col => (
               <th
                 key={col.key}
-                onClick={() => handleSort(col.key)}
-                className={`px-3 py-2.5 text-gray-500 text-xs uppercase tracking-wider font-medium cursor-pointer hover:text-gray-300 whitespace-nowrap select-none ${ALIGN[col.align]}`}
+                onClick={() => col.key !== 'signal' && handleSort(col.key)}
+                className={`px-3 py-2.5 text-gray-500 text-xs uppercase tracking-wider font-medium whitespace-nowrap select-none ${ALIGN[col.align]} ${col.key !== 'signal' ? 'cursor-pointer hover:text-gray-300' : ''}`}
               >
                 {col.label}
-                <span className="ml-1 inline-block w-3">
-                  {sortKey === col.key
-                    ? <span className="text-blue-400">{sortDir === 'asc' ? '↑' : '↓'}</span>
-                    : <span className="text-gray-800">↕</span>}
-                </span>
+                {col.key === 'signal' ? (
+                  signalsLoading
+                    ? <span className="ml-1 inline-block w-2 h-2 rounded-full bg-gray-700 animate-pulse align-middle" />
+                    : null
+                ) : (
+                  <span className="ml-1 inline-block w-3">
+                    {sortKey === col.key
+                      ? <span className="text-blue-400">{sortDir === 'asc' ? '↑' : '↓'}</span>
+                      : <span className="text-gray-800">↕</span>}
+                  </span>
+                )}
               </th>
             ))}
           </tr>
@@ -181,6 +210,21 @@ export default function CardTable() {
                 {!isWhatnotView && (
                   <td className={`px-3 py-2 font-mono text-xs text-right ${pl.cls}`}>{pl.text}</td>
                 )}
+                {isWhatnotView && (() => {
+                  const playerFlags = whatnotSignals?.[card.player_name?.trim()];
+                  const topFlag = playerFlags?.slice().sort(
+                    (a, b) => FLAG_PRIORITY.indexOf(a.key) - FLAG_PRIORITY.indexOf(b.key)
+                  )[0];
+                  return (
+                    <td className="px-3 py-2 text-center">
+                      {topFlag ? (
+                        <span className={`inline-flex items-center gap-0.5 text-[10px] font-medium px-1.5 py-0.5 rounded ${FLAG_COLORS[topFlag.color]}`}>
+                          {topFlag.emoji} {topFlag.label}
+                        </span>
+                      ) : null}
+                    </td>
+                  );
+                })()}
               </tr>
             );
           })}

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
@@ -62,8 +62,13 @@ export default function CardDrawer() {
   const [sourceUrls, setSourceUrls]       = useState({ cardLadderUrl: null, ebayListingUrl: null });
 
   // Price history state
-  const [priceHistory, setPriceHistory]   = useState([]);
-  const [historyLoading, setHistoryLoading] = useState(false);
+  const [priceHistory, setPriceHistory]       = useState([]);
+  const [historyLoading, setHistoryLoading]   = useState(false);
+
+  // Player market state
+  const [playerMarket, setPlayerMarket]         = useState(null);
+  const [playerMarketLoading, setPlayerMarketLoading] = useState(false);
+  const playerMarketCache                       = useRef({});
 
   useEffect(() => {
     if (selectedCard) {
@@ -77,6 +82,29 @@ export default function CardDrawer() {
       setSaleForm({ sale_price: '', sale_date: new Date().toISOString().split('T')[0], platform: '' });
       // Fetch price history whenever a card is selected
       fetchPriceHistory(selectedCard.id);
+
+      // Fetch player market data (cached per player name per session)
+      const name = selectedCard.player_name?.trim();
+      if (name) {
+        if (playerMarketCache.current[name] !== undefined) {
+          setPlayerMarket(playerMarketCache.current[name]);
+          setPlayerMarketLoading(false);
+        } else {
+          setPlayerMarket(null);
+          setPlayerMarketLoading(true);
+          axios.get(`/api/analytics/player-market/${encodeURIComponent(name)}`)
+            .then(r => {
+              const mkt = r.data.notFound ? null : r.data;
+              playerMarketCache.current[name] = mkt;
+              setPlayerMarket(mkt);
+            })
+            .catch(() => {
+              playerMarketCache.current[name] = null;
+              setPlayerMarket(null);
+            })
+            .finally(() => setPlayerMarketLoading(false));
+        }
+      }
     }
   }, [selectedCard?.id]);
 
@@ -582,6 +610,86 @@ export default function CardDrawer() {
                 </div>
               )}
             </section>
+          )}
+
+          {/* ── Player Market ── */}
+          {!editing && (
+            playerMarketLoading ? (
+              <section>
+                <SectionHead label="Player Market" />
+                <div className="bg-[#0d1120] border border-gray-800 rounded-lg p-4">
+                  <div className="animate-pulse space-y-2.5">
+                    <div className="h-3 bg-gray-800 rounded w-1/3" />
+                    <div className="h-7 bg-gray-800 rounded w-1/4" />
+                    <div className="flex gap-4">
+                      {[1,2,3,4,5].map(n => <div key={n} className="h-8 bg-gray-800 rounded w-10" />)}
+                    </div>
+                  </div>
+                </div>
+              </section>
+            ) : playerMarket ? (
+              <section>
+                <SectionHead label="Player Market" />
+                <div className="bg-[#0d1120] border border-gray-800 rounded-lg p-4 space-y-3">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-gray-200 font-medium text-sm">{playerMarket.player}</span>
+                    {playerMarket.category && (
+                      <span className="text-gray-600 text-[10px] uppercase tracking-wider bg-gray-800 px-1.5 py-0.5 rounded">
+                        {playerMarket.category}
+                      </span>
+                    )}
+                  </div>
+                  <div>
+                    <span className="text-gray-700 text-[10px] uppercase tracking-widest block mb-0.5">Index</span>
+                    <span className="text-2xl font-bold font-mono text-gray-100">
+                      {playerMarket.currentIndex != null ? Math.round(playerMarket.currentIndex) : '—'}
+                    </span>
+                  </div>
+                  <div className="flex gap-4 flex-wrap">
+                    {[
+                      { label: 'W',  val: playerMarket.weeklyPercentChange },
+                      { label: 'M',  val: playerMarket.monthlyPercentChange },
+                      { label: 'Q',  val: playerMarket.quarterlyPercentChange },
+                      { label: '6M', val: playerMarket.halfAnnualPercentChange },
+                      { label: '1Y', val: playerMarket.annualPercentChange },
+                    ].map(({ label, val }) => {
+                      const pos = val != null ? val >= 0 : null;
+                      return (
+                        <div key={label} className="flex flex-col items-center min-w-[32px]">
+                          <span className="text-gray-700 text-[10px] uppercase mb-0.5">{label}</span>
+                          <span className={`text-sm font-mono font-semibold ${pos === null ? 'text-gray-700' : pos ? 'text-emerald-400' : 'text-red-400'}`}>
+                            {val != null ? `${pos ? '+' : ''}${(val * 100).toFixed(1)}%` : '—'}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {playerMarket.flags?.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {playerMarket.flags.map(flag => {
+                        const cls = {
+                          yellow: 'bg-yellow-400/15 text-yellow-400 border border-yellow-400/30',
+                          green:  'bg-emerald-400/15 text-emerald-400 border border-emerald-400/30',
+                          blue:   'bg-blue-400/15 text-blue-400 border border-blue-400/30',
+                          red:    'bg-red-400/15 text-red-400 border border-red-400/30',
+                          purple: 'bg-purple-400/15 text-purple-400 border border-purple-400/30',
+                        }[flag.color];
+                        return (
+                          <span key={flag.key} className={`inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded ${cls}`}>
+                            {flag.emoji} {flag.label}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {playerMarket.dailySales > 0 && (
+                    <div className="text-gray-700 text-[11px] font-mono">
+                      {playerMarket.dailySales} sales today
+                    </div>
+                  )}
+                </div>
+              </section>
+            ) : null
           )}
 
           {/* Notes */}

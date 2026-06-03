@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
+const { getToken }                               = require('../services/firebaseAuth');
+const { unwrapFsField, buildFlags, fetchPlayerDoc } = require('../utils/firestore');
 
 router.get('/', (req, res) => {
   res.json(db.prepare('SELECT * FROM watchlist ORDER BY created_at DESC').all());
@@ -27,6 +29,40 @@ router.put('/:id', (req, res) => {
 router.delete('/:id', (req, res) => {
   db.prepare('DELETE FROM watchlist WHERE id = ?').run(req.params.id);
   res.json({ success: true });
+});
+
+// GET /api/watchlist/market-data
+router.get('/market-data', async (req, res) => {
+  const items = db.prepare('SELECT * FROM watchlist ORDER BY created_at DESC').all();
+  if (!items.length) return res.json([]);
+
+  let token;
+  try {
+    token = await getToken();
+  } catch {
+    return res.json(items.map(item => ({ ...item, marketData: { notFound: true } })));
+  }
+
+  const result = [];
+  for (const item of items) {
+    let marketData = { notFound: true };
+    try {
+      const f = await fetchPlayerDoc(token, item.search_query);
+      if (f) {
+        marketData = {
+          notFound:             false,
+          currentIndex:         unwrapFsField(f.dailyIndex),
+          weeklyPercentChange:  unwrapFsField(f.weeklyPercentChange)  ?? 0,
+          monthlyPercentChange: unwrapFsField(f.monthlyPercentChange) ?? 0,
+          dailySales:           unwrapFsField(f.dailySales)           ?? 0,
+          flags:                buildFlags(f),
+        };
+      }
+    } catch {}
+    result.push({ ...item, marketData });
+  }
+
+  res.json(result);
 });
 
 module.exports = router;

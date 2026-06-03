@@ -11,7 +11,7 @@ export default function WatchlistView() {
   const [adding, setAdding] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const load = () => axios.get('/api/watchlist').then(r => setItems(r.data));
+  const load = () => axios.get('/api/watchlist/market-data').then(r => setItems(r.data));
 
   useEffect(() => { load().finally(() => setLoading(false)); }, []);
 
@@ -101,7 +101,29 @@ export default function WatchlistView() {
             )}
             {items.map((item, i) => (
               <tr key={item.id} className={`border-b border-gray-800/40 hover:bg-[#1a2035] transition-colors ${i % 2 === 0 ? '' : 'bg-[#111620]/40'}`}>
-                <td className="px-4 py-2.5 text-gray-200">{item.search_query}</td>
+                <td className="px-4 py-2.5">
+                  <div className="text-gray-200">{item.search_query}</div>
+                  {item.marketData && !item.marketData.notFound && (
+                    <div className="flex items-center gap-2 mt-1 flex-wrap">
+                      {item.marketData.currentIndex != null && (
+                        <span className="text-gray-600 text-xs font-mono">
+                          idx {Math.round(item.marketData.currentIndex)}
+                        </span>
+                      )}
+                      {item.marketData.monthlyPercentChange != null && (
+                        <span className={`text-xs font-mono font-semibold ${item.marketData.monthlyPercentChange >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                          {item.marketData.monthlyPercentChange >= 0 ? '+' : ''}
+                          {(item.marketData.monthlyPercentChange * 100).toFixed(1)}%
+                        </span>
+                      )}
+                      {item.marketData.flags?.slice(0, 3).map(flag => (
+                        <span key={flag.key} className="text-[11px]" title={flag.label}>
+                          {flag.emoji}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </td>
                 <td className="px-4 py-2.5 text-gray-500 capitalize text-sm">{item.sport || '—'}</td>
                 <td className="px-4 py-2.5 text-gray-300 font-mono">{item.target_price ? `$${Number(item.target_price).toFixed(2)}` : '—'}</td>
                 <td className="px-4 py-2.5 text-gray-400 font-mono">{item.alert_threshold ? `$${Number(item.alert_threshold).toFixed(2)}` : '—'}</td>
