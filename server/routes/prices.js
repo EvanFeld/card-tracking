@@ -26,8 +26,7 @@ router.post('/refresh/:id', async (req, res) => {
     card.year,
     card.brand,
     card.card_set,
-    card.is_graded,
-    card.grade,
+    card.card_number,
     { manualCardLadderUrl, ebayUrls }
   );
 

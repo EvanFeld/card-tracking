@@ -28,6 +28,11 @@ export default function ScannerView() {
   const [opResults, setOpResults]     = useState(null);
   const [opError, setOpError]         = useState(null);
 
+  // ── Market Intelligence ───────────────────────────────────────────────────────
+  const [miLoading, setMiLoading]     = useState(false);
+  const [miResults, setMiResults]     = useState(null);
+  const [miError, setMiError]         = useState(null);
+
   useEffect(() => {
     if (logRef.current) {
       logRef.current.scrollTop = logRef.current.scrollHeight;
@@ -64,6 +69,19 @@ export default function ScannerView() {
     };
   };
 
+  const handleMarketIntelligence = async () => {
+    setMiLoading(true);
+    setMiError(null);
+    try {
+      const res = await axios.get('/api/scanner/portfolio-intelligence');
+      setMiResults(res.data);
+    } catch {
+      setMiError('Failed to fetch market intelligence.');
+    } finally {
+      setMiLoading(false);
+    }
+  };
+
   const handleOpportunityScan = async () => {
     setOpLoading(true);
     setOpError(null);
@@ -80,7 +98,7 @@ export default function ScannerView() {
   return (
     <div className="flex-1 overflow-y-auto p-6 max-w-4xl mx-auto w-full space-y-10">
 
-      {/* ── Section 1: Bulk Refresh ── */}
+      {/* ── Section 1: Bulk Price Refresh ── */}
       <section>
         <SectionHead label="Bulk Price Refresh" />
         <p className="text-gray-600 text-xs mb-4">
@@ -161,7 +179,106 @@ export default function ScannerView() {
         )}
       </section>
 
-      {/* ── Section 2: Opportunity Scanner ── */}
+      {/* ── Section 2: Market Intelligence ── */}
+      <section>
+        <SectionHead label="Market Intelligence" />
+        <p className="text-gray-600 text-xs mb-4">
+          Scans owned players against Card Ladder index data and flags volume spikes, dip buys, breakouts, sell pressure, and undervalued cards.
+        </p>
+
+        <button
+          onClick={handleMarketIntelligence}
+          disabled={miLoading}
+          className="flex items-center gap-2 text-sm bg-purple-600/20 hover:bg-purple-600/40 disabled:opacity-50 disabled:cursor-not-allowed border border-purple-600/30 text-purple-400 px-4 py-2 rounded transition-colors"
+        >
+          {miLoading ? (
+            <>
+              <svg className="animate-spin h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+              Scanning…
+            </>
+          ) : (
+            <>🧠 Scan Portfolio</>
+          )}
+        </button>
+
+        {miError && (
+          <div className="mt-3 text-xs text-red-400 bg-red-900/20 border border-red-800/30 rounded px-3 py-2">
+            {miError}
+          </div>
+        )}
+
+        {miResults !== null && (
+          <div className="mt-4">
+            {miResults.length === 0 ? (
+              <div className="bg-[#0d1120] border border-gray-800 rounded-lg px-4 py-8 text-center">
+                <div className="text-gray-700 text-sm">No signals detected</div>
+                <div className="text-gray-800 text-xs mt-1">All owned players are within normal market ranges</div>
+              </div>
+            ) : (
+              <div className="bg-[#0d1120] border border-gray-800 rounded-lg overflow-hidden">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-gray-800 text-gray-600 uppercase tracking-widest text-[10px]">
+                      <th className="text-left px-4 py-2.5">Player</th>
+                      <th className="text-right px-3 py-2.5">Index</th>
+                      <th className="text-right px-3 py-2.5">Weekly</th>
+                      <th className="text-right px-3 py-2.5">Monthly</th>
+                      <th className="text-right px-3 py-2.5">Sales</th>
+                      <th className="text-left px-3 py-2.5">Signals</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {miResults.map((row, i) => {
+                      const flagColors = {
+                        yellow: 'bg-yellow-400/15 text-yellow-400 border border-yellow-400/30',
+                        green:  'bg-emerald-400/15 text-emerald-400 border border-emerald-400/30',
+                        blue:   'bg-blue-400/15 text-blue-400 border border-blue-400/30',
+                        red:    'bg-red-400/15 text-red-400 border border-red-400/30',
+                        purple: 'bg-purple-400/15 text-purple-400 border border-purple-400/30',
+                      };
+                      return (
+                        <tr key={i} className={`border-b border-gray-800/60 hover:bg-gray-800/30 transition-colors ${i === miResults.length - 1 ? 'border-b-0' : ''}`}>
+                          <td className="px-4 py-3 text-gray-200 font-medium">
+                            {row.player}
+                            {row.category && <span className="ml-2 text-gray-600 text-[10px] capitalize">{row.category}</span>}
+                          </td>
+                          <td className="px-3 py-3 text-right text-gray-300 font-mono">{row.currentIndex}</td>
+                          <td className={`px-3 py-3 text-right font-mono ${row.weekly >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                            {row.weekly >= 0 ? '+' : ''}{(row.weekly * 100).toFixed(1)}%
+                          </td>
+                          <td className={`px-3 py-3 text-right font-mono ${row.monthly >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                            {row.monthly >= 0 ? '+' : ''}{(row.monthly * 100).toFixed(1)}%
+                          </td>
+                          <td className="px-3 py-3 text-right text-gray-500 font-mono">
+                            {row.dailySales}
+                            {row.avg30Sales > 0 && (
+                              <span className="text-gray-700 text-[10px] ml-1">/{row.avg30Sales}</span>
+                            )}
+                          </td>
+                          <td className="px-3 py-3">
+                            <div className="flex flex-wrap gap-1">
+                              {row.flags.map(flag => (
+                                <span key={flag.key} className={`inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded ${flagColors[flag.color]}`}>
+                                  {flag.emoji} {flag.label}
+                                </span>
+                              ))}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+      </section>
+
+      {/* ── Section 3: Opportunity Scanner ── */}
       <section>
         <SectionHead label="Opportunity Scanner" />
         <p className="text-gray-600 text-xs mb-4">

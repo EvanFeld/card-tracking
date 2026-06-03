@@ -403,12 +403,12 @@ async function fetchPricesFromEbayUrls(urls) {
 
 // ── Query builder ─────────────────────────────────────────────────────────────
 
-function buildQuery(playerName, cardSet, year, isGraded, grade) {
+function buildQuery(playerName, cardSet, year, cardNumber) {
   const parts = [];
-  if (playerName) parts.push(playerName.toLowerCase().trim());
-  if (cardSet)    parts.push(cardSet.toLowerCase().trim());
-  if (year)       parts.push(String(year).trim());
-  if (isGraded && grade) parts.push(String(grade).trim());
+  if (playerName)  parts.push(playerName.toLowerCase().trim());
+  if (cardSet)     parts.push(cardSet.toLowerCase().trim());
+  if (year)        parts.push(String(year).trim());
+  if (cardNumber)  parts.push(`#${String(cardNumber).trim()}`);
   const q = parts.filter(Boolean).join(' ');
   console.log('[CardLadder] Query:', JSON.stringify(q));
   return q;
@@ -496,7 +496,7 @@ async function extractPrices(page) {
 
 // ── Main export ───────────────────────────────────────────────────────────────
 
-async function fetchCardLadderData(playerName, year, brand, cardSet, isGraded, grade, options = {}) {
+async function fetchCardLadderData(playerName, year, brand, cardSet, cardNumber, options = {}) {
   const { manualCardLadderUrl, ebayUrls } = options;
 
   // If locked eBay URLs provided, skip Card Ladder entirely
@@ -514,7 +514,7 @@ async function fetchCardLadderData(playerName, year, brand, cardSet, isGraded, g
       searchUrl = manualCardLadderUrl;
       console.log('[CardLadder] Using manual Card Ladder URL:', searchUrl);
     } else {
-      const queryString = buildQuery(playerName, cardSet, year, isGraded, grade);
+      const queryString = buildQuery(playerName, cardSet, year, cardNumber);
       if (!queryString) { console.log('[CardLadder] Empty query.'); return null; }
       searchUrl = `${SALES_BASE}?sort=date&direction=desc&q=${encodeURIComponent(queryString)}`;
       console.log('[CardLadder] Navigating to:', searchUrl);
