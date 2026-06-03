@@ -106,6 +106,21 @@ db.exec(`
   );
 `);
 
+try { db.exec('ALTER TABLE grading_queue ADD COLUMN received_grade TEXT'); } catch {}
+try { db.exec('ALTER TABLE grading_queue ADD COLUMN received_at TEXT'); } catch {}
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS psa_pop_cache (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    card_id INTEGER UNIQUE REFERENCES cards(id) ON DELETE CASCADE,
+    pop10 INTEGER,
+    pop9 INTEGER,
+    pop_total INTEGER,
+    card_name TEXT,
+    fetched_at TEXT DEFAULT (datetime('now'))
+  );
+`);
+
 // Migrate status constraint to include 'whatnot' on existing databases
 try {
   const schema = db.prepare(`SELECT sql FROM sqlite_master WHERE type='table' AND name='cards'`).get();

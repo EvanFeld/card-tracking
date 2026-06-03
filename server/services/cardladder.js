@@ -594,6 +594,86 @@ async function fetchCardLadderData(playerName, year, brand, cardSet, cardNumber,
   }
 }
 
+// ── eBay comps search ─────────────────────────────────────────────────────────
+
+function buildEbaySearchUrl(playerName, year, brand, cardSet, cardNumber, graded = false) {
+  const parts = [playerName, year, brand, cardSet, cardNumber].filter(Boolean);
+  if (graded) parts.push('PSA 10');
+  const query = parts.join(' ');
+  return `https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(query)}&LH_Sold=1&LH_Complete=1&_sop=13`;
+}
+
+const BAD_TITLE_WORDS = ['lot', 'bundle', 'x2', 'x3', 'x4', 'x5', 'reprint', 'custom'];
+
+async function fetchEbaySoldPrices(playerName, year, brand, cardSet, cardNumber) {
+  const url = buildEbaySearchUrl(playerName, year, brand, cardSet, cardNumber);
+  console.log('[eBay comps] Fetching sold comps:', url);
+
+  const ok = await loginEbay();
+  if (!ok) {
+    console.log('[eBay comps] Not logged in — aborting.');
+    return null;
+  }
+
+  try {
+    await sharedEbayPage.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
+    await delay(1500);
+
+    const rawPrices = await sharedEbayPage.evaluate((badWords) => {
+      const results = [];
+      // eBay sold listings: .s-item containers with .POSITIVE (green) prices
+      const items = document.querySelectorAll('.s-item, [class*="srp-results"] li');
+      for (const item of items) {
+        const title = (item.querySelector('.s-item__title, [class*="item__title"]')?.innerText || '').toLowerCase();
+        const priceEl = item.querySelector('.s-item__price, [class*="item__price"], .POSITIVE');
+        if (!priceEl) continue;
+        const priceText = priceEl.innerText.replace(/,/g, '');
+        const m = priceText.match(/\$?([\d]+\.?\d*)/);
+        if (!m) continue;
+        const price = parseFloat(m[1]);
+        if (!price || price < 1 || price > 5000) continue;
+        if (badWords.some(w => title.includes(w))) continue;
+        results.push(price);
+      }
+      return results;
+    }, BAD_TITLE_WORDS);
+
+    console.log('[eBay comps] Raw prices:', rawPrices);
+
+    if (rawPrices.length < 3) {
+      console.log('[eBay comps] Fewer than 3 valid prices — returning null');
+      return null;
+    }
+
+    // Calculate median for outlier filtering
+    const sorted = [...rawPrices].sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    const median = sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+
+    // Filter outliers: keep prices within 0.3x–3x the median
+    const filtered = rawPrices.filter(p => p >= median * 0.3 && p <= median * 3);
+    if (filtered.length < 3) return null;
+
+    const avg = filtered.reduce((a, b) => a + b, 0) / filtered.length;
+    const sortedFiltered = [...filtered].sort((a, b) => a - b);
+    const midF = Math.floor(sortedFiltered.length / 2);
+    const finalMedian = sortedFiltered.length % 2 !== 0
+      ? sortedFiltered[midF]
+      : (sortedFiltered[midF - 1] + sortedFiltered[midF]) / 2;
+
+    return {
+      prices: filtered,
+      median: Math.round(finalMedian * 100) / 100,
+      avg:    Math.round(avg * 100) / 100,
+      count:  filtered.length,
+      url,
+    };
+  } catch (err) {
+    console.error('[eBay comps] Error:', err.message);
+    return null;
+  }
+}
+
 async function closeBrowser() {
   if (sharedEbayPage) {
     console.log('[CardLadder] Closing eBay page...');
@@ -611,4 +691,4 @@ async function closeBrowser() {
   }
 }
 
-module.exports = { fetchCardLadderData, fetchPricesFromEbayUrls, loginEbay, closeBrowser };
+module.exports = { fetchCardLadderData, fetchPricesFromEbayUrls, fetchEbaySoldPrices, buildEbaySearchUrl, loginEbay, closeBrowser };

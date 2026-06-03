@@ -1,8 +1,10 @@
 const express = require('express');
 const router  = express.Router();
 const db      = require('../db');
-const { getToken }                     = require('../services/firebaseAuth');
-const { buildFlags, fetchPlayerDoc }   = require('../utils/firestore');
+const { getToken }                      = require('../services/firebaseAuth');
+const { buildFlags, fetchPlayerDoc }    = require('../utils/firestore');
+const { fetchPsaPop }                   = require('../services/psaPop');
+const { fetchEbaySoldPrices }           = require('../services/cardladder');
 
 const DEFAULT_GRADING_FEE = 19;
 
@@ -52,12 +54,22 @@ function scoreCard(card, flags = []) {
   return score;
 }
 
-function psa10Multiplier(score) {
-  if (score >= 60) return 4.0;
-  if (score >= 45) return 3.0;
-  if (score >= 35) return 2.2;
-  if (score >= 25) return 1.6;
-  return 1.2;
+function psa10Multiplier(score, pop10) {
+  let base;
+  if (score >= 60) base = 4.0;
+  else if (score >= 45) base = 3.0;
+  else if (score >= 35) base = 2.2;
+  else if (score >= 25) base = 1.6;
+  else base = 1.2;
+
+  if (pop10 === null || pop10 === undefined) return base;
+  if (pop10 === 0)    return base * 2.0;
+  if (pop10 <= 5)     return base * 1.7;
+  if (pop10 <= 15)    return base * 1.4;
+  if (pop10 <= 50)    return base * 1.1;
+  if (pop10 <= 150)   return base * 0.9;
+  if (pop10 <= 500)   return base * 0.75;
+  return base * 0.6;
 }
 
 function verdict(score, rawCondition) {
@@ -107,10 +119,16 @@ router.get('/analyze', async (req, res) => {
     const queueMap  = {};
     for (const row of queueRows) queueMap[row.card_id] = row.id;
 
+    // Load cached pop data
+    const popRows = db.prepare('SELECT card_id, pop10, pop9, pop_total FROM psa_pop_cache').all();
+    const popMap = {};
+    for (const r of popRows) popMap[r.card_id] = r;
+
     const results = cards.map(card => {
       const flags = playerFlagsMap[card.player_name?.trim()] || [];
       const score = scoreCard(card, flags);
-      const mult  = psa10Multiplier(score);
+      const pop   = popMap[card.id] ?? null;
+      const mult  = psa10Multiplier(score, pop?.pop10 ?? null);
       const base  = card.current_value || 0;
       const est_psa10    = base * mult;
       const est_psa9     = est_psa10 * 0.45;
@@ -129,6 +147,7 @@ router.get('/analyze', async (req, res) => {
         purchase_price: card.purchase_price,
         score, verdict: v, est_psa10, est_psa9, roi_best, roi_realistic,
         flags,
+        pop_data: pop ? { pop10: pop.pop10, pop9: pop.pop9, popTotal: pop.pop_total } : null,
         in_queue: queue_id !== null,
         queue_id,
       };
@@ -183,6 +202,63 @@ router.get('/queue', (req, res) => {
       ORDER BY gq.added_at DESC
     `).all();
     res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/grade-advisor/pop/:cardId
+router.get('/pop/:cardId', async (req, res) => {
+  const cardId = parseInt(req.params.cardId, 10);
+  const card = db.prepare('SELECT * FROM cards WHERE id = ?').get(cardId);
+  if (!card) return res.status(404).json({ error: 'Card not found' });
+
+  try {
+    const pop = await fetchPsaPop(card.player_name, card.year, card.brand, card.card_set, card.card_number);
+    if (!pop) return res.json({ notFound: true });
+
+    // Upsert into cache
+    db.prepare(`
+      INSERT INTO psa_pop_cache (card_id, pop10, pop9, pop_total, card_name, fetched_at)
+      VALUES (?, ?, ?, ?, ?, datetime('now'))
+      ON CONFLICT(card_id) DO UPDATE SET
+        pop10 = excluded.pop10, pop9 = excluded.pop9,
+        pop_total = excluded.pop_total, card_name = excluded.card_name,
+        fetched_at = excluded.fetched_at
+    `).run(cardId, pop.pop10 ?? 0, pop.pop9 ?? 0, pop.popTotal ?? 0, pop.cardName || null);
+
+    res.json({ pop10: pop.pop10, pop9: pop.pop9, popTotal: pop.popTotal, cardName: pop.cardName, url: pop.url });
+  } catch (err) {
+    console.error('[grade-advisor] pop error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/grade-advisor/ebay-comps/:cardId
+router.get('/ebay-comps/:cardId', async (req, res) => {
+  const cardId = parseInt(req.params.cardId, 10);
+  const card = db.prepare('SELECT * FROM cards WHERE id = ?').get(cardId);
+  if (!card) return res.status(404).json({ error: 'Card not found' });
+
+  try {
+    const comps = await fetchEbaySoldPrices(card.player_name, card.year, card.brand, card.card_set, card.card_number);
+    if (!comps) return res.json({ notFound: true });
+    res.json(comps);
+  } catch (err) {
+    console.error('[grade-advisor] ebay-comps error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PUT /api/grade-advisor/queue/:id
+router.put('/queue/:id', (req, res) => {
+  const { received_grade, received_at } = req.body;
+  try {
+    db.prepare(`UPDATE grading_queue SET received_grade = ?, received_at = ? WHERE id = ?`)
+      .run(received_grade || null, received_at || null, req.params.id);
+    const item = db.prepare('SELECT * FROM grading_queue WHERE id = ?').get(req.params.id);
+    if (!item) return res.status(404).json({ error: 'Queue item not found' });
+    res.json(item);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

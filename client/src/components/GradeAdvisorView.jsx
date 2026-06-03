@@ -92,8 +92,18 @@ export default function GradeAdvisorView() {
   const [results,    setResults]    = useState(null);
   const [filter,     setFilter]     = useState('all');
 
+  // Pop data: { [cardId]: { pop10, pop9, popTotal } | 'loading' | 'notFound' }
+  const [popCache, setPopCache] = useState({});
+  const [fetchingAllPop, setFetchingAllPop] = useState(false);
+
+  // eBay comps: { [cardId]: { median, count, url } | 'loading' | 'notFound' }
+  const [compsCache, setCompsCache] = useState({});
+
   const [queue,        setQueue]        = useState([]);
   const [queueLoading, setQueueLoading] = useState(true);
+
+  // Grade received edit state: { [queueItemId]: inputValue }
+  const [gradeInputs, setGradeInputs] = useState({});
 
   useEffect(() => { loadQueue(); }, []);
 
@@ -147,6 +157,52 @@ export default function GradeAdvisorView() {
     setResults(prev => prev ? prev.map(r => r.queue_id === queueId ? { ...r, in_queue: false, queue_id: null } : r) : prev);
   };
 
+  const fetchPop = async (cardId) => {
+    if (popCache[cardId] && popCache[cardId] !== 'loading') return;
+    setPopCache(p => ({ ...p, [cardId]: 'loading' }));
+    try {
+      const res = await fetch(`/api/grade-advisor/pop/${cardId}`);
+      const data = await res.json();
+      setPopCache(p => ({ ...p, [cardId]: data.notFound ? 'notFound' : data }));
+    } catch {
+      setPopCache(p => ({ ...p, [cardId]: 'notFound' }));
+    }
+  };
+
+  const handleFetchAllPop = async () => {
+    if (!results) return;
+    const sendCards = results.filter(r => r.verdict === 'send' && !popCache[r.id]);
+    setFetchingAllPop(true);
+    for (const card of sendCards) {
+      await fetchPop(card.id);
+      await new Promise(r => setTimeout(r, 2000));
+    }
+    setFetchingAllPop(false);
+  };
+
+  const fetchComps = async (cardId) => {
+    if (compsCache[cardId] && compsCache[cardId] !== 'loading') return;
+    setCompsCache(p => ({ ...p, [cardId]: 'loading' }));
+    try {
+      const res = await fetch(`/api/grade-advisor/ebay-comps/${cardId}`);
+      const data = await res.json();
+      setCompsCache(p => ({ ...p, [cardId]: data.notFound ? 'notFound' : data }));
+    } catch {
+      setCompsCache(p => ({ ...p, [cardId]: 'notFound' }));
+    }
+  };
+
+  const handleGradeBlur = async (queueItemId, value) => {
+    if (!value?.trim()) return;
+    const today = new Date().toISOString().split('T')[0];
+    await fetch(`/api/grade-advisor/queue/${queueItemId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ received_grade: value.trim(), received_at: today }),
+    });
+    loadQueue();
+  };
+
   const filtered = results
     ? (filter === 'all' ? results : results.filter(r => r.verdict === filter))
     : [];
@@ -180,6 +236,17 @@ export default function GradeAdvisorView() {
               />
               <span className="text-gray-700 text-xs">/card</span>
             </div>
+            {results !== null && (
+              <button
+                onClick={handleFetchAllPop}
+                disabled={fetchingAllPop}
+                className="flex items-center gap-2 bg-purple-700/20 hover:bg-purple-700/40 disabled:opacity-50 border border-purple-600/30 text-purple-400 text-xs px-3 py-2 rounded transition-colors"
+              >
+                {fetchingAllPop ? (
+                  <><svg className="animate-spin h-3 w-3" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>Fetching…</>
+                ) : 'Fetch All Pop (Send)'}
+              </button>
+            )}
             <button
               onClick={handleAnalyze}
               disabled={analyzing}
@@ -231,7 +298,7 @@ export default function GradeAdvisorView() {
                 <table className="w-full text-sm border-collapse min-w-[1200px]">
                   <thead>
                     <tr className="bg-[#0f1117] border-b border-gray-800 text-left">
-                      {['Player', 'Year', 'Brand / Set', 'Attributes', 'Condition', 'Score', 'Est PSA 10', 'Est PSA 9', 'ROI Best', 'ROI Realistic', 'Signals', 'Verdict', 'Action'].map(h => (
+                      {['Player', 'Year', 'Brand / Set', 'Attributes', 'Condition', 'Score', 'PSA 10 Pop', 'Est PSA 10', 'Est PSA 9', 'ROI Best', 'ROI Realistic', 'Signals', 'eBay Comps', 'Verdict', 'Action'].map(h => (
                         <th key={h} className="px-3 py-2.5 text-gray-600 text-xs uppercase tracking-wider font-medium whitespace-nowrap">{h}</th>
                       ))}
                     </tr>
@@ -239,7 +306,7 @@ export default function GradeAdvisorView() {
                   <tbody>
                     {filtered.length === 0 && (
                       <tr>
-                        <td colSpan={13} className="px-4 py-10 text-center text-gray-700 text-sm">No cards match this filter.</td>
+                        <td colSpan={15} className="px-4 py-10 text-center text-gray-700 text-sm">No cards match this filter.</td>
                       </tr>
                     )}
                     {filtered.map((card, i) => {
@@ -255,11 +322,54 @@ export default function GradeAdvisorView() {
                           <td className="px-3 py-2"><AttributeBadges card={card} /></td>
                           <td className="px-3 py-2 text-gray-500 text-xs whitespace-nowrap">{card.raw_condition || '—'}</td>
                           <td className="px-3 py-2 text-center"><ScoreBadge score={card.score} /></td>
+                          {/* PSA 10 Pop column */}
+                          <td className="px-3 py-2 text-center">
+                            {(() => {
+                              const pop = popCache[card.id] || card.pop_data;
+                              if (pop === 'loading') return <svg className="animate-spin h-3 w-3 text-gray-600 mx-auto" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>;
+                              if (pop && pop !== 'notFound') return (
+                                <div className="text-[11px] font-mono leading-tight">
+                                  <span className={pop.pop10 === 0 ? 'text-emerald-400 font-bold' : pop.pop10 > 200 ? 'text-red-400' : 'text-gray-400'}>
+                                    10s: {pop.pop10}
+                                  </span>
+                                  <span className="text-gray-700 mx-0.5">|</span>
+                                  <span className="text-gray-600">Tot: {pop.popTotal}</span>
+                                </div>
+                              );
+                              return (
+                                <button onClick={() => fetchPop(card.id)}
+                                  className="text-[10px] text-gray-700 hover:text-purple-400 transition-colors">
+                                  {pop === 'notFound' ? <span className="text-gray-800">—</span> : '🔍'}
+                                </button>
+                              );
+                            })()}
+                          </td>
                           <td className="px-3 py-2 text-gray-300 font-mono text-right whitespace-nowrap">{fmtMoney(card.est_psa10)}</td>
                           <td className="px-3 py-2 text-gray-400 font-mono text-right whitespace-nowrap">{fmtMoney(card.est_psa9)}</td>
                           <td className="px-3 py-2 font-mono text-right whitespace-nowrap">{fmtROI(card.roi_best)}</td>
                           <td className="px-3 py-2 font-mono text-right whitespace-nowrap">{fmtROI(card.roi_realistic)}</td>
                           <td className="px-3 py-2"><SignalPills flags={card.flags} /></td>
+                          {/* eBay Comps column */}
+                          <td className="px-3 py-2 text-center">
+                            {(() => {
+                              const comps = compsCache[card.id];
+                              if (comps === 'loading') return <svg className="animate-spin h-3 w-3 text-gray-600 mx-auto" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>;
+                              if (comps && comps !== 'notFound') {
+                                const aboveVal = card.current_value != null && comps.median > card.current_value;
+                                return (
+                                  <div className={`text-[11px] font-mono leading-tight ${aboveVal ? 'text-emerald-400' : 'text-red-400'}`}>
+                                    ${comps.median} · {comps.count} sales
+                                  </div>
+                                );
+                              }
+                              return (
+                                <button onClick={() => fetchComps(card.id)}
+                                  className="text-[10px] text-gray-700 hover:text-yellow-400 transition-colors">
+                                  {comps === 'notFound' ? <span className="text-gray-800">—</span> : '📊'}
+                                </button>
+                              );
+                            })()}
+                          </td>
                           <td className="px-3 py-2">
                             <span className={`inline-block text-[11px] font-medium px-2 py-0.5 rounded whitespace-nowrap ${vc.cls}`}>
                               {vc.label}
@@ -349,7 +459,7 @@ export default function GradeAdvisorView() {
             <table className="w-full text-sm border-collapse">
               <thead>
                 <tr className="bg-[#0f1117] border-b border-gray-800 text-left">
-                  {['Player', 'Set', 'Condition', 'Your Notes', 'Est PSA 10', 'ROI (realistic)', 'Verdict', ''].map(h => (
+                  {['Player', 'Set', 'Condition', 'Your Notes', 'Est PSA 10', 'ROI (realistic)', 'Verdict', 'Grade Received', ''].map(h => (
                     <th key={h} className="px-3 py-2.5 text-gray-600 text-xs uppercase tracking-wider font-medium">{h}</th>
                   ))}
                 </tr>
@@ -373,6 +483,27 @@ export default function GradeAdvisorView() {
                         <span className={`inline-block text-[11px] font-medium px-2 py-0.5 rounded whitespace-nowrap ${vc.cls}`}>
                           {vc.label}
                         </span>
+                      </td>
+                      <td className="px-3 py-2">
+                        {item.received_grade ? (
+                          <span className={`inline-block text-[11px] font-mono font-bold px-2 py-0.5 rounded ${
+                            item.received_grade === '10' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
+                            item.received_grade === '9'  ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' :
+                            'bg-gray-700/40 text-gray-400 border border-gray-700/40'
+                          }`}>
+                            PSA {item.received_grade}
+                          </span>
+                        ) : (
+                          <input
+                            type="text"
+                            placeholder="Enter grade…"
+                            value={gradeInputs[item.id] ?? ''}
+                            onChange={e => setGradeInputs(g => ({ ...g, [item.id]: e.target.value }))}
+                            onBlur={e => handleGradeBlur(item.id, e.target.value)}
+                            onKeyDown={e => e.key === 'Enter' && handleGradeBlur(item.id, e.target.value)}
+                            className="bg-[#0d1120] border border-gray-700 rounded px-2 py-0.5 text-xs text-gray-300 font-mono w-24 focus:outline-none focus:border-blue-500"
+                          />
+                        )}
                       </td>
                       <td className="px-3 py-2 text-right">
                         <button
