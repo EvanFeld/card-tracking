@@ -63,7 +63,7 @@ router.post('/', (req, res) => {
 
   const {
     player_name, year, brand, card_set, card_number, sport, parallel,
-    serial_number, is_auto, is_mem, is_numbered, is_graded, grading_company,
+    serial_number, is_auto, is_mem, is_numbered, is_graded, is_insert, grading_company,
     grade, raw_condition, purchase_price, purchase_date, purchased_from,
     current_value, last_price_check, status, notes, image_url
   } = req.body;
@@ -72,10 +72,10 @@ router.post('/', (req, res) => {
     const result = db.prepare(`
       INSERT INTO cards (
         player_name, year, brand, card_set, card_number, sport, parallel,
-        serial_number, is_auto, is_mem, is_numbered, is_graded, grading_company,
+        serial_number, is_auto, is_mem, is_numbered, is_graded, is_insert, grading_company,
         grade, raw_condition, purchase_price, purchase_date, purchased_from,
         current_value, last_price_check, status, notes, image_url
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       player_name,
       year        ? Number(year)         : null,
@@ -89,6 +89,7 @@ router.post('/', (req, res) => {
       is_mem      ? 1 : 0,
       is_numbered ? 1 : 0,
       is_graded   ? 1 : 0,
+      is_insert   ? 1 : 0,
       grading_company || null,
       grade           || null,
       raw_condition   || null,
@@ -117,7 +118,7 @@ router.put('/:id', (req, res) => {
 
   const allFields = [
     'player_name', 'year', 'brand', 'card_set', 'card_number', 'sport', 'parallel',
-    'serial_number', 'is_auto', 'is_mem', 'is_numbered', 'is_graded', 'grading_company',
+    'serial_number', 'is_auto', 'is_mem', 'is_numbered', 'is_graded', 'is_insert', 'grading_company',
     'grade', 'raw_condition', 'purchase_price', 'purchase_date', 'purchased_from',
     'current_value', 'last_price_check', 'status', 'notes', 'image_url',
     'card_ladder_url', 'card_ladder_url_locked',
@@ -126,7 +127,7 @@ router.put('/:id', (req, res) => {
     'ebay_sale_url_3', 'ebay_sale_url_3_locked'
   ];
   const boolFields = new Set([
-    'is_auto', 'is_mem', 'is_numbered', 'is_graded',
+    'is_auto', 'is_mem', 'is_numbered', 'is_graded', 'is_insert',
     'card_ladder_url_locked', 'ebay_sale_url_1_locked', 'ebay_sale_url_2_locked', 'ebay_sale_url_3_locked'
   ]);
 

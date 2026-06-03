@@ -305,7 +305,7 @@ export default function CardDrawer() {
           <section>
             <SectionHead label="Attributes" />
             <div className="flex gap-2 flex-wrap mb-4">
-              {[['is_auto', 'Auto'], ['is_mem', 'Memorabilia'], ['is_numbered', 'Numbered'], ['is_graded', 'Graded']].map(([k, l]) => (
+              {[['is_auto', 'Auto'], ['is_mem', 'Memorabilia'], ['is_numbered', 'Numbered'], ['is_graded', 'Graded'], ['is_insert', 'Insert']].map(([k, l]) => (
                 <button
                   key={k}
                   onClick={() => editing && updBool(k)}

@@ -139,6 +139,7 @@ export default function CardTable() {
                 <div className="flex items-center gap-1.5">
                   {card.is_auto       ? <span className="text-yellow-400 text-[10px] font-bold bg-yellow-400/10 px-1 rounded">AU</span> : null}
                   {card.is_mem        ? <span className="text-purple-400 text-[10px] font-bold bg-purple-400/10 px-1 rounded">MEM</span> : null}
+                  {card.is_insert     ? <span className="text-teal-400 text-[10px] font-bold bg-teal-400/10 px-1 rounded">INS</span> : null}
                   {card.serial_number ? <span className="text-orange-400 text-[10px] font-bold">{card.serial_number}</span> : null}
                   {card.player_name}
                 </div>

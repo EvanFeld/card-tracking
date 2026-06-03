@@ -76,6 +76,7 @@ try { db.exec('ALTER TABLE cards ADD COLUMN ebay_sale_url_2 TEXT'); } catch {}
 try { db.exec('ALTER TABLE cards ADD COLUMN ebay_sale_url_2_locked INTEGER DEFAULT 0'); } catch {}
 try { db.exec('ALTER TABLE cards ADD COLUMN ebay_sale_url_3 TEXT'); } catch {}
 try { db.exec('ALTER TABLE cards ADD COLUMN ebay_sale_url_3_locked INTEGER DEFAULT 0'); } catch {}
+try { db.exec('ALTER TABLE cards ADD COLUMN is_insert INTEGER DEFAULT 0'); } catch {}
 
 // Migrate status constraint to include 'whatnot' on existing databases
 try {

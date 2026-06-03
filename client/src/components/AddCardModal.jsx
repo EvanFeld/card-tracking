@@ -146,8 +146,8 @@ export default function AddCardModal({ onClose }) {
             <div className="text-gray-700 text-[11px] uppercase tracking-widest mb-3">Attributes</div>
             <div className="flex gap-4 flex-wrap">
               {(quickAdd
-                ? [['is_auto', 'Auto'], ['is_numbered', 'Numbered']]
-                : [['is_auto', 'Auto'], ['is_mem', 'Memorabilia'], ['is_numbered', 'Numbered'], ['is_graded', 'Graded']]
+                ? [['is_auto', 'Auto'], ['is_numbered', 'Numbered'], ['is_insert', 'Insert']]
+                : [['is_auto', 'Auto'], ['is_mem', 'Memorabilia'], ['is_numbered', 'Numbered'], ['is_graded', 'Graded'], ['is_insert', 'Insert']]
               ).map(([k, l]) => (
                 <label key={k} className="flex items-center gap-2 cursor-pointer select-none">
                   <input type="checkbox" checked={!!form[k]}
