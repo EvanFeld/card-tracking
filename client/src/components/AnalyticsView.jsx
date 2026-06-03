@@ -17,7 +17,6 @@ const WHATNOT_YELLOW = '#eab308';
 const BAR_COLORS = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444'];
 
 const MARKET_TIMEFRAMES = [
-  { key: 'daily',     label: 'Daily',    field: 'weeklyPercentChange'     },
   { key: 'weekly',    label: 'Weekly',   field: 'weeklyPercentChange'     },
   { key: 'monthly',   label: 'Monthly',  field: 'monthlyPercentChange'    },
   { key: 'quarterly', label: 'Quarterly',field: 'quarterlyPercentChange'  },
