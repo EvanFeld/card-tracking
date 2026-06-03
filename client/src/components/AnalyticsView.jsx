@@ -267,94 +267,7 @@ export default function AnalyticsView() {
         </section>
       )}
 
-      {/* ── Section 1: Portfolio Value Over Time ── */}
-      <section>
-        <SectionHead label="Portfolio Value Over Time" />
-        {portfolioHistory.length < 2 ? (
-          <EmptyState msg="Refresh card prices to start tracking portfolio value over time" />
-        ) : (
-          <div className="bg-[#161b27] border border-gray-800 rounded-lg pt-4 pr-4 pb-2 pl-0">
-            <ResponsiveContainer width="100%" height={220}>
-              <LineChart data={portfolioHistory} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1a2035" vertical={false} />
-                <XAxis
-                  dataKey="date"
-                  tick={{ fill: '#4b5563', fontSize: 10 }}
-                  tickLine={false}
-                  axisLine={false}
-                  tickFormatter={v => v ? v.slice(5) : ''}
-                />
-                <YAxis
-                  tick={{ fill: '#4b5563', fontSize: 10 }}
-                  tickLine={false}
-                  axisLine={false}
-                  tickFormatter={v => `$${v}`}
-                  width={60}
-                />
-                <Tooltip content={<DarkTooltip fmt={moneyFmt} />} />
-                <Line
-                  type="monotone"
-                  dataKey="value"
-                  stroke="#3b82f6"
-                  strokeWidth={2}
-                  dot={{ fill: '#3b82f6', r: 3, strokeWidth: 0 }}
-                  activeDot={{ r: 5, fill: '#60a5fa' }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        )}
-      </section>
-
-      {/* ── Section 2: Top Performers ── */}
-      <section>
-        <SectionHead label="Top Performers — Unrealized P&L" />
-        {topPerformers.length === 0 ? (
-          <EmptyState msg="Add cards with both purchase prices and current values to see rankings" />
-        ) : (
-          <div className="bg-[#161b27] border border-gray-800 rounded-lg overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-800">
-                  {['#', 'Card', 'Cost', 'Value', 'P&L', 'Return'].map((h, i) => (
-                    <th key={h}
-                      className={`text-[11px] text-gray-600 uppercase tracking-widest px-4 py-2.5 font-normal ${i <= 1 ? 'text-left' : 'text-right'} ${i === 0 ? 'w-8' : ''}`}>
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {topPerformers.map((c, i) => {
-                  const pos = c.profit >= 0;
-                  const plCls = pos ? 'text-emerald-400' : 'text-red-400';
-                  return (
-                    <tr key={i} className="border-b border-gray-800/40 hover:bg-white/[0.02] transition-colors">
-                      <td className="px-4 py-2.5 text-gray-700 font-mono text-xs">{i + 1}</td>
-                      <td className="px-4 py-2.5">
-                        <div className="text-gray-200 font-medium">{c.player_name}</div>
-                        <div className="text-gray-600 text-xs">
-                          {[c.brand, c.grade ? `Grade ${c.grade}` : null].filter(Boolean).join(' · ')}
-                        </div>
-                      </td>
-                      <td className="px-4 py-2.5 text-right text-gray-500 font-mono">${Number(c.purchase_price).toFixed(2)}</td>
-                      <td className="px-4 py-2.5 text-right text-gray-300 font-mono">${Number(c.current_value).toFixed(2)}</td>
-                      <td className={`px-4 py-2.5 text-right font-mono font-semibold ${plCls}`}>
-                        {pos ? '+' : ''}${Math.abs(c.profit).toFixed(2)}
-                      </td>
-                      <td className={`px-4 py-2.5 text-right font-mono font-semibold ${plCls}`}>
-                        {pos ? '+' : ''}{c.return_pct}%
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
-
-      {/* ── Section 3: Portfolio Breakdown ── */}
+      {/* ── Section 1: Portfolio Breakdown ── */}
       <section>
         <SectionHead label="Portfolio Breakdown" />
         {portfolioBreakdown.length === 0 ? (
@@ -418,6 +331,93 @@ export default function AnalyticsView() {
             </div>
           );
         })()}
+      </section>
+
+      {/* ── Section 2: Portfolio Value Over Time ── */}
+      <section>
+        <SectionHead label="Portfolio Value Over Time" />
+        {portfolioHistory.length < 2 ? (
+          <EmptyState msg="Refresh card prices to start tracking portfolio value over time" />
+        ) : (
+          <div className="bg-[#161b27] border border-gray-800 rounded-lg pt-4 pr-4 pb-2 pl-0">
+            <ResponsiveContainer width="100%" height={220}>
+              <LineChart data={portfolioHistory} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1a2035" vertical={false} />
+                <XAxis
+                  dataKey="date"
+                  tick={{ fill: '#4b5563', fontSize: 10 }}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={v => v ? v.slice(5) : ''}
+                />
+                <YAxis
+                  tick={{ fill: '#4b5563', fontSize: 10 }}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={v => `$${v}`}
+                  width={60}
+                />
+                <Tooltip content={<DarkTooltip fmt={moneyFmt} />} />
+                <Line
+                  type="monotone"
+                  dataKey="value"
+                  stroke="#3b82f6"
+                  strokeWidth={2}
+                  dot={{ fill: '#3b82f6', r: 3, strokeWidth: 0 }}
+                  activeDot={{ r: 5, fill: '#60a5fa' }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+      </section>
+
+      {/* ── Section 3: Top Performers ── */}
+      <section>
+        <SectionHead label="Top Performers — Unrealized P&L" />
+        {topPerformers.length === 0 ? (
+          <EmptyState msg="Add cards with both purchase prices and current values to see rankings" />
+        ) : (
+          <div className="bg-[#161b27] border border-gray-800 rounded-lg overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-800">
+                  {['#', 'Card', 'Cost', 'Value', 'P&L', 'Return'].map((h, i) => (
+                    <th key={h}
+                      className={`text-[11px] text-gray-600 uppercase tracking-widest px-4 py-2.5 font-normal ${i <= 1 ? 'text-left' : 'text-right'} ${i === 0 ? 'w-8' : ''}`}>
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {topPerformers.map((c, i) => {
+                  const pos = c.profit >= 0;
+                  const plCls = pos ? 'text-emerald-400' : 'text-red-400';
+                  return (
+                    <tr key={i} className="border-b border-gray-800/40 hover:bg-white/[0.02] transition-colors">
+                      <td className="px-4 py-2.5 text-gray-700 font-mono text-xs">{i + 1}</td>
+                      <td className="px-4 py-2.5">
+                        <div className="text-gray-200 font-medium">{c.player_name}</div>
+                        <div className="text-gray-600 text-xs">
+                          {[c.brand, c.grade ? `Grade ${c.grade}` : null].filter(Boolean).join(' · ')}
+                        </div>
+                      </td>
+                      <td className="px-4 py-2.5 text-right text-gray-500 font-mono">${Number(c.purchase_price).toFixed(2)}</td>
+                      <td className="px-4 py-2.5 text-right text-gray-300 font-mono">${Number(c.current_value).toFixed(2)}</td>
+                      <td className={`px-4 py-2.5 text-right font-mono font-semibold ${plCls}`}>
+                        {pos ? '+' : ''}${Math.abs(c.profit).toFixed(2)}
+                      </td>
+                      <td className={`px-4 py-2.5 text-right font-mono font-semibold ${plCls}`}>
+                        {pos ? '+' : ''}{c.return_pct}%
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
 
       {/* ── Section 4: Sales Performance ── */}
