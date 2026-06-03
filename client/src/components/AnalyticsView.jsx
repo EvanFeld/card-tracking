@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import {
-  LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
+  ComposedChart, LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
 
@@ -82,9 +82,42 @@ function slugify(name) {
   return name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
 }
 
+function fmtVol(v) {
+  return v >= 1000 ? `$${(v / 1000).toFixed(1)}k` : `$${v.toFixed(0)}`;
+}
+
+function IndexSalesTooltip({ active, payload, label }) {
+  if (!active || !payload?.length) return null;
+  const idx   = payload.find(p => p.dataKey === 'value');
+  const sales = payload.find(p => p.dataKey === 'sales');
+  return (
+    <div className="bg-[#0f1117] border border-gray-700 rounded px-3 py-2 text-xs shadow-lg">
+      <div className="text-gray-500 mb-1">{label}</div>
+      {idx?.value != null && (
+        <div className="text-blue-400 font-mono font-semibold">Idx {idx.value.toFixed(2)}</div>
+      )}
+      {sales?.value != null && (
+        <div className="text-yellow-400 font-mono">Vol {fmtVol(sales.value)}</div>
+      )}
+    </div>
+  );
+}
+
 function PlayerIndexCard({ data }) {
   const [range, setRange] = useState('1Y');
-  const filtered = filterByRange(data.indexHistory, range);
+
+  const filteredIndex = filterByRange(data.indexHistory, range);
+  const filteredSales = filterByRange(data.salesHistory || [], range);
+
+  // Merge by date → { date, value (index), sales }
+  const salesMap = {};
+  for (const s of filteredSales) salesMap[s.date] = s.value;
+  const merged = filteredIndex.map(d => ({ date: d.date, value: d.value, sales: salesMap[d.date] ?? null }));
+  for (const s of filteredSales) {
+    if (!merged.find(d => d.date === s.date)) merged.push({ date: s.date, value: null, sales: s.value });
+  }
+  merged.sort((a, b) => a.date.localeCompare(b.date));
+
   return (
     <div id={slugify(data.player)} className="bg-[#161b27] border border-gray-800 rounded-lg p-4 space-y-3">
       <div className="flex items-center justify-between">
@@ -99,6 +132,16 @@ function PlayerIndexCard({ data }) {
             </button>
           ))}
         </div>
+      </div>
+      <div className="flex items-center gap-3">
+        <span className="flex items-center gap-1 text-[10px] text-gray-600">
+          <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: '#3b82f6' }} />
+          Index
+        </span>
+        <span className="flex items-center gap-1 text-[10px] text-gray-600">
+          <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: '#eab308' }} />
+          Sales Vol
+        </span>
       </div>
       <div className="flex gap-6 flex-wrap">
         <div className="flex flex-col">
@@ -125,12 +168,12 @@ function PlayerIndexCard({ data }) {
           );
         })}
       </div>
-      {filtered.length < 2 ? (
+      {merged.filter(d => d.value != null).length < 2 ? (
         <div className="text-gray-700 text-sm py-4 text-center">Not enough data for selected range</div>
       ) : (
         <div className="pt-2 pr-4 pb-0 pl-0">
           <ResponsiveContainer width="100%" height={180}>
-            <LineChart data={filtered} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+            <ComposedChart data={merged} margin={{ top: 4, right: 55, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#1a2035" vertical={false} />
               <XAxis
                 dataKey="date"
@@ -148,7 +191,16 @@ function PlayerIndexCard({ data }) {
                 tickFormatter={v => v.toFixed(0)}
                 width={50}
               />
-              <Tooltip content={<DarkTooltip fmt={v => v.toFixed(2)} />} />
+              <YAxis
+                yAxisId="sales"
+                orientation="right"
+                tick={{ fill: '#4b5563', fontSize: 10 }}
+                tickLine={false}
+                axisLine={false}
+                tickFormatter={v => v >= 1000 ? `$${(v / 1000).toFixed(1)}k` : `$${v.toFixed(0)}`}
+                width={55}
+              />
+              <Tooltip content={<IndexSalesTooltip />} />
               <Line
                 type="monotone"
                 dataKey="value"
@@ -157,7 +209,17 @@ function PlayerIndexCard({ data }) {
                 dot={false}
                 activeDot={{ r: 4, fill: '#60a5fa' }}
               />
-            </LineChart>
+              <Line
+                yAxisId="sales"
+                type="monotone"
+                dataKey="sales"
+                stroke="#eab308"
+                strokeWidth={1.5}
+                dot={false}
+                activeDot={{ r: 3, fill: '#fbbf24' }}
+                strokeOpacity={0.7}
+              />
+            </ComposedChart>
           </ResponsiveContainer>
         </div>
       )}
