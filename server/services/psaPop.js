@@ -1,10 +1,14 @@
 const puppeteer = require('puppeteer');
 
 // PSA Pop Report scraper
-// Uses headless:'new' (Chrome headless shell) to bypass Cloudflare on psacard.com.
-// The search form calls a JSONP endpoint on collectorsuniverse.com for autocomplete;
-// once a result row appears in #tableResults, we click "Show Population" which
-// calls /pop/getpopulationjson (not CF-protected) and renders counts in the DOM.
+//
+// Architecture: psacard.com/pop/search loads fine with headless:'new' (bypasses CF).
+// The search results are populated via JSONP from collectorsuniverse.com, which is
+// protected by Cloudflare Managed Challenge — not solvable by headless browsers.
+//
+// Status: Returns null for all cards until collectorsuniverse.com CF can be bypassed.
+// The Grade Advisor handles null pop data gracefully (falls back to base multiplier).
+// When pop data IS obtained (e.g., manually cached), the scoring reflects it correctly.
 
 const PSA_SEARCH = 'https://www.psacard.com/pop/search';
 const PSA_POP_JSON = 'https://www.psacard.com/pop/getpopulationjson';
