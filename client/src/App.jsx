@@ -5,6 +5,7 @@ import LedgerView from './components/LedgerView';
 import WatchlistView from './components/WatchlistView';
 import AnalyticsView from './components/AnalyticsView';
 import ScannerView from './components/ScannerView';
+import GradeAdvisorView from './components/GradeAdvisorView';
 import useCardStore from './store/cardStore';
 
 export default function App() {
@@ -23,6 +24,7 @@ export default function App() {
       {page === 'watchlist'  && <WatchlistView />}
       {page === 'analytics'  && <AnalyticsView />}
       {page === 'scanner'    && <ScannerView />}
+      {page === 'grading'    && <GradeAdvisorView />}
     </Layout>
   );
 }

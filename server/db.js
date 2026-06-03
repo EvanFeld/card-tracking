@@ -77,6 +77,34 @@ try { db.exec('ALTER TABLE cards ADD COLUMN ebay_sale_url_2_locked INTEGER DEFAU
 try { db.exec('ALTER TABLE cards ADD COLUMN ebay_sale_url_3 TEXT'); } catch {}
 try { db.exec('ALTER TABLE cards ADD COLUMN ebay_sale_url_3_locked INTEGER DEFAULT 0'); } catch {}
 try { db.exec('ALTER TABLE cards ADD COLUMN is_insert INTEGER DEFAULT 0'); } catch {}
+try { db.exec('ALTER TABLE cards ADD COLUMN is_ssp    INTEGER DEFAULT 0'); } catch {}
+try { db.exec('ALTER TABLE cards ADD COLUMN is_rookie INTEGER DEFAULT 0'); } catch {}
+
+try {
+  db.exec(`
+    UPDATE cards
+    SET is_ssp = 1, serial_number = NULL
+    WHERE TRIM(UPPER(serial_number)) = 'SSP'
+      AND is_ssp = 0
+  `);
+  console.log('[db] SSP migration: moved SSP serial_number values to is_ssp flag');
+} catch (e) {
+  console.error('[db] SSP migration error:', e.message);
+}
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS grading_queue (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    card_id INTEGER REFERENCES cards(id) ON DELETE CASCADE,
+    self_grade TEXT,
+    notes TEXT,
+    verdict TEXT,
+    roi_best REAL,
+    roi_realistic REAL,
+    score INTEGER,
+    added_at TEXT DEFAULT (datetime('now'))
+  );
+`);
 
 // Migrate status constraint to include 'whatnot' on existing databases
 try {

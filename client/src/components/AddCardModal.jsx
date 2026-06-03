@@ -11,7 +11,8 @@ const inp = 'bg-[#0d1120] border border-gray-700 rounded px-2.5 py-1.5 text-sm t
 const EMPTY = {
   player_name: '', year: '', brand: '', card_set: '', card_number: '', sport: '',
   parallel: '', serial_number: '', is_auto: false, is_mem: false, is_numbered: false,
-  is_graded: false, grading_company: '', grade: '', raw_condition: '',
+  is_graded: false, is_insert: false, is_ssp: false, is_rookie: false,
+  grading_company: '', grade: '', raw_condition: '',
   purchase_price: '', purchase_date: '', purchased_from: '', current_value: '',
   status: 'owned', notes: '', image_url: ''
 };
@@ -144,8 +145,8 @@ export default function AddCardModal({ onClose }) {
             <div className="text-gray-700 text-[11px] uppercase tracking-widest mb-3">Attributes</div>
             <div className="flex gap-4 flex-wrap">
               {(quickAdd
-                ? [['is_auto', 'Auto'], ['is_numbered', 'Numbered'], ['is_insert', 'Insert']]
-                : [['is_auto', 'Auto'], ['is_mem', 'Memorabilia'], ['is_numbered', 'Numbered'], ['is_graded', 'Graded'], ['is_insert', 'Insert']]
+                ? [['is_auto', 'Auto'], ['is_numbered', 'Numbered'], ['is_insert', 'Insert'], ['is_ssp', 'SSP'], ['is_rookie', 'Rookie']]
+                : [['is_auto', 'Auto'], ['is_mem', 'Memorabilia'], ['is_numbered', 'Numbered'], ['is_graded', 'Graded'], ['is_insert', 'Insert'], ['is_ssp', 'SSP'], ['is_rookie', 'Rookie']]
               ).map(([k, l]) => (
                 <label key={k} className="flex items-center gap-2 cursor-pointer select-none">
                   <input type="checkbox" checked={!!form[k]}

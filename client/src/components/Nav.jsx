@@ -3,7 +3,8 @@ const NAV_ITEMS = [
   { id: 'ledger',     label: 'Sales Ledger', icon: '$' },
   { id: 'watchlist',  label: 'Watchlist',    icon: '◎' },
   { id: 'analytics',  label: 'Analytics',    icon: '▲' },
-  { id: 'scanner',    label: 'Scanner',      icon: '⚡' }
+  { id: 'scanner',    label: 'Scanner',      icon: '⚡' },
+  { id: 'grading',    label: 'Grade Advisor', icon: '🔬' }
 ];
 
 export default function Nav({ page, setPage }) {
