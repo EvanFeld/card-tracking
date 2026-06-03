@@ -408,18 +408,17 @@ export default function AnalyticsView() {
         ) : (() => {
           const total = portfolioBreakdown.reduce((s, r) => s + (r.value || 0), 0);
           return (
-            <div className="bg-[#161b27] border border-gray-800 rounded-lg p-4 flex gap-6 flex-wrap items-center">
-              <div className="flex-shrink-0">
-                <ResponsiveContainer width={240} height={240}>
+            <div className="bg-[#161b27] border border-gray-800 rounded-lg p-6 flex gap-8 flex-wrap items-center">
+              <div className="w-[220px] h-[220px] flex-shrink-0">
+                <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
                       data={portfolioBreakdown}
                       cx="50%"
                       cy="50%"
-                      outerRadius={100}
+                      innerRadius={40}
+                      outerRadius={90}
                       dataKey="value"
-                      label={({ label, percent }) => percent > 0.05 ? label : ''}
-                      labelLine={{ stroke: '#374151', strokeWidth: 1 }}
                     >
                       {portfolioBreakdown.map((row, i) => (
                         <Cell
@@ -450,15 +449,15 @@ export default function AnalyticsView() {
                   return (
                     <div key={i} className="flex items-center gap-3">
                       <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
-                      <span className="text-gray-400 text-sm w-28">{row.label}</span>
+                      <span className="text-gray-400 text-sm w-32">{row.label}</span>
                       <span className="text-gray-200 font-mono text-sm">{fmtMoney(row.value)}</span>
-                      <span className="text-gray-600 text-xs">{pct}%</span>
+                      <span className="text-gray-500 text-xs">{pct}%</span>
                     </div>
                   );
                 })}
                 <div className="mt-1 pt-2 border-t border-gray-800 flex items-center gap-3">
                   <span className="w-2.5 h-2.5 flex-shrink-0" />
-                  <span className="text-gray-600 text-sm w-28">Total</span>
+                  <span className="text-gray-600 text-sm w-32">Total</span>
                   <span className="text-gray-300 font-mono text-sm font-semibold">{fmtMoney(total)}</span>
                 </div>
               </div>

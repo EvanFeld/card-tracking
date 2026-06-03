@@ -50,10 +50,21 @@ const COLS = [
   { key: 'status',       label: 'Status',       align: 'left' }
 ];
 
+const WHATNOT_COLS = [
+  { key: 'player_name',   label: 'Player', align: 'left'   },
+  { key: 'year',          label: 'Year',   align: 'right'  },
+  { key: 'brand',         label: 'Brand',  align: 'left'   },
+  { key: 'card_set',      label: 'Set',    align: 'left'   },
+  { key: 'card_number',   label: '#',      align: 'right'  },
+  { key: 'sport',         label: 'Sport',  align: 'center' },
+  { key: 'current_value', label: 'Value',  align: 'right'  },
+];
+
 const ALIGN = { left: 'text-left', right: 'text-right', center: 'text-center' };
 
 export default function CardTable() {
-  const { cards, loading, setSelectedCard } = useCardStore();
+  const { cards, loading, setSelectedCard, filters } = useCardStore();
+  const isWhatnotView = filters.status === 'whatnot';
   const [sortKey, setSortKey] = useState('created_at');
   const [sortDir, setSortDir] = useState('desc');
 
@@ -94,7 +105,7 @@ export default function CardTable() {
       <table className="w-full text-sm border-collapse min-w-[900px]">
         <thead className="sticky top-0 z-10">
           <tr className="bg-[#161b27] border-b border-gray-800">
-            {COLS.map(col => (
+            {(isWhatnotView ? WHATNOT_COLS : COLS).map(col => (
               <th
                 key={col.key}
                 onClick={() => handleSort(col.key)}
@@ -123,54 +134,57 @@ export default function CardTable() {
             const rowBg = card.status === 'whatnot'
               ? (i % 2 === 0 ? 'bg-yellow-900/20' : 'bg-yellow-900/15')
               : (i % 2 === 0 ? 'bg-[#0f1117]' : 'bg-[#111620]');
+            const playerCell = (
+              <td className="px-3 py-2 text-gray-100 font-medium whitespace-nowrap">
+                <div className="flex items-center gap-1.5">
+                  {card.is_auto       ? <span className="text-yellow-400 text-[10px] font-bold bg-yellow-400/10 px-1 rounded">AU</span> : null}
+                  {card.is_mem        ? <span className="text-purple-400 text-[10px] font-bold bg-purple-400/10 px-1 rounded">MEM</span> : null}
+                  {card.serial_number ? <span className="text-orange-400 text-[10px] font-bold">{card.serial_number}</span> : null}
+                  {card.player_name}
+                </div>
+              </td>
+            );
+            const sportCell = (
+              <td className="px-3 py-2 text-center">
+                {card.sport
+                  ? <span className="text-[11px] bg-gray-800 text-gray-500 px-1.5 py-0.5 rounded font-mono">{SPORT_ABBR[card.sport] || card.sport}</span>
+                  : <span className="text-gray-800">—</span>}
+              </td>
+            );
             return (
               <tr
                 key={card.id}
                 onClick={() => setSelectedCard(card)}
                 className={`${rowBg} border-b border-gray-900 cursor-pointer hover:bg-[#1c2840] transition-colors group`}
               >
-                {/* Player */}
-                <td className="px-3 py-2 text-gray-100 font-medium whitespace-nowrap">
-                  <div className="flex items-center gap-1.5">
-                    {card.is_auto    ? <span className="text-yellow-400 text-[10px] font-bold bg-yellow-400/10 px-1 rounded">AU</span> : null}
-                    {card.is_mem     ? <span className="text-purple-400 text-[10px] font-bold bg-purple-400/10 px-1 rounded">MEM</span> : null}
-                    {card.serial_number ? <span className="text-orange-400 text-[10px] font-bold">{card.serial_number}</span> : null}
-                    {card.player_name}
-                  </div>
-                </td>
-                {/* Year */}
+                {playerCell}
                 <td className="px-3 py-2 text-gray-500 font-mono text-right">{card.year || '—'}</td>
-                {/* Brand */}
                 <td className="px-3 py-2 text-gray-400">{card.brand || '—'}</td>
-                {/* Set */}
                 <td className="px-3 py-2 text-gray-500 max-w-[140px] truncate" title={card.card_set}>{card.card_set || '—'}</td>
-                {/* Card # */}
                 <td className="px-3 py-2 text-gray-600 font-mono text-xs text-right">{card.card_number ? `#${card.card_number}` : '—'}</td>
-                {/* Sport */}
-                <td className="px-3 py-2 text-center">
-                  {card.sport
-                    ? <span className="text-[11px] bg-gray-800 text-gray-500 px-1.5 py-0.5 rounded font-mono">{SPORT_ABBR[card.sport] || card.sport}</span>
-                    : <span className="text-gray-800">—</span>}
-                </td>
-                {/* Grade / Condition */}
-                <td className="px-3 py-2 whitespace-nowrap">
-                  {card.is_graded
-                    ? <span className="text-blue-300 font-mono text-xs">{[card.grading_company, card.grade].filter(Boolean).join(' ') || '—'}</span>
-                    : <span className="text-gray-500 text-xs">{card.raw_condition || '—'}</span>
-                  }
-                </td>
-                {/* Cost */}
-                <td className="px-3 py-2 text-gray-500 font-mono text-right">{fmtMoney(card.purchase_price)}</td>
-                {/* Value */}
+                {sportCell}
+                {!isWhatnotView && (
+                  <td className="px-3 py-2 whitespace-nowrap">
+                    {card.is_graded
+                      ? <span className="text-blue-300 font-mono text-xs">{[card.grading_company, card.grade].filter(Boolean).join(' ') || '—'}</span>
+                      : <span className="text-gray-500 text-xs">{card.raw_condition || '—'}</span>
+                    }
+                  </td>
+                )}
+                {!isWhatnotView && (
+                  <td className="px-3 py-2 text-gray-500 font-mono text-right">{fmtMoney(card.purchase_price)}</td>
+                )}
                 <td className="px-3 py-2 text-gray-100 font-mono font-semibold text-right">{fmtMoney(card.current_value)}</td>
-                {/* P&L */}
-                <td className={`px-3 py-2 font-mono text-xs text-right ${pl.cls}`}>{pl.text}</td>
-                {/* Status */}
-                <td className="px-3 py-2">
-                  <span className={`text-xs font-medium capitalize ${STATUS_PILL[card.status] || 'text-gray-500'}`}>
-                    {STATUS_LABEL[card.status] || card.status}
-                  </span>
-                </td>
+                {!isWhatnotView && (
+                  <>
+                    <td className={`px-3 py-2 font-mono text-xs text-right ${pl.cls}`}>{pl.text}</td>
+                    <td className="px-3 py-2">
+                      <span className={`text-xs font-medium capitalize ${STATUS_PILL[card.status] || 'text-gray-500'}`}>
+                        {STATUS_LABEL[card.status] || card.status}
+                      </span>
+                    </td>
+                  </>
+                )}
               </tr>
             );
           })}

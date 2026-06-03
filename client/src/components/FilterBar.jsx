@@ -21,7 +21,7 @@ export default function FilterBar({ onAdd }) {
     sport: '', brand: '', graded: '', grade: '', raw_condition: '', status: 'owned', player_name: ''
   });
 
-  const activeCount = Object.entries(filters).filter(([k, v]) => v !== '' && !(k === 'status' && v === 'owned')).length;
+  const activeCount = Object.entries(filters).filter(([k, v]) => v !== '' && k !== 'status').length;
 
   return (
     <div className="bg-[#13192a] border-b border-gray-800 px-4 py-2 flex gap-2 flex-wrap items-center flex-shrink-0">
@@ -66,14 +66,6 @@ export default function FilterBar({ onAdd }) {
         </select>
       )}
 
-      <select value={filters.status} onChange={e => upd('status', e.target.value)} className={sel}>
-        <option value="">All Status</option>
-        <option value="owned">Owned</option>
-        <option value="sold">Sold</option>
-        <option value="watchlist">Watchlist</option>
-        <option value="whatnot">Whatnot Ammo</option>
-      </select>
-
       {activeCount > 0 && (
         <button onClick={clear} className="text-gray-600 hover:text-gray-300 text-xs px-1.5 py-1.5 transition-colors">
           Clear ({activeCount})
@@ -81,6 +73,30 @@ export default function FilterBar({ onAdd }) {
       )}
 
       <div className="flex-1" />
+
+      {/* View mode toggle */}
+      <div className="flex items-center bg-[#0d1120] border border-gray-700 rounded-full p-0.5 gap-0.5">
+        <button
+          onClick={() => upd('status', 'owned')}
+          className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${
+            filters.status === 'owned' || filters.status === ''
+              ? 'bg-blue-600 text-white'
+              : 'text-gray-500 hover:text-gray-300'
+          }`}
+        >
+          Collection
+        </button>
+        <button
+          onClick={() => upd('status', 'whatnot')}
+          className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${
+            filters.status === 'whatnot'
+              ? 'bg-yellow-500 text-black'
+              : 'text-gray-500 hover:text-gray-300'
+          }`}
+        >
+          🟡 Whatnot Ammo
+        </button>
+      </div>
 
       <button
         onClick={onAdd}
