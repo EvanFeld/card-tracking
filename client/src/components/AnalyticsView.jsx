@@ -249,69 +249,23 @@ export default function AnalyticsView() {
       </section>
 
       {/* ── Whatnot Ammo Panel ── */}
-      {whatnotAmmo && whatnotAmmo.totalCards > 0 && (() => {
-        const indexByPlayer = {};
-        playerIndex.forEach(p => { indexByPlayer[p.player.toLowerCase()] = p; });
-        const enriched = (whatnotAmmo.byPlayer || []).map(p => ({
-          ...p,
-          indexData: indexByPlayer[p.player_name.trim().toLowerCase()] || null,
-        })).sort((a, b) => {
-          if (a.indexData && b.indexData) return b.indexData.currentIndex - a.indexData.currentIndex;
-          if (a.indexData) return -1;
-          if (b.indexData) return 1;
-          return 0;
-        });
-        return (
-          <section className="border-l-2 border-yellow-500/40 pl-4">
-            <SectionHead label="Whatnot Ammo" />
-            <div className="flex gap-6 flex-wrap mb-4">
-              {[
-                { label: 'Total Cards', value: whatnotAmmo.totalCards,  fmt: v => v,         color: 'text-yellow-400' },
-                { label: 'Total Value', value: whatnotAmmo.totalValue,  fmt: fmtMoney,        color: 'text-gray-200' },
-                { label: 'Autos',       value: whatnotAmmo.autos,       fmt: v => v,         color: 'text-gray-400' },
-              ].map(m => (
-                <div key={m.label} className="flex flex-col min-w-0">
-                  <span className="text-gray-600 text-xs uppercase tracking-widest leading-none mb-1">{m.label}</span>
-                  <span className={`text-xl font-semibold font-mono leading-tight ${m.color}`}>{m.fmt(m.value)}</span>
-                </div>
-              ))}
-            </div>
-            <div className="bg-[#161b27] border border-yellow-900/30 rounded-lg overflow-hidden">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-gray-800">
-                    {['Player', 'Sport', 'Cards', 'Auto', 'Index', 'Monthly'].map((h, i) => (
-                      <th key={h} className={`text-[11px] text-gray-600 uppercase tracking-widest px-4 py-2.5 font-normal ${i === 0 ? 'text-left' : 'text-right'}`}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {enriched.map((p, i) => {
-                    const monthly = p.indexData?.percentChanges?.monthly;
-                    const pos = monthly >= 0;
-                    return (
-                      <tr key={i} className="border-b border-gray-800/40 hover:bg-white/[0.02] transition-colors">
-                        <td className="px-4 py-2.5 text-gray-200 font-medium">{p.player_name}</td>
-                        <td className="px-4 py-2.5 text-right text-gray-500 capitalize text-xs">{p.sport || '—'}</td>
-                        <td className="px-4 py-2.5 text-right text-gray-400 font-mono">{p.count}</td>
-                        <td className="px-4 py-2.5 text-right">
-                          {p.is_auto ? <span className="text-yellow-400 text-[10px] font-bold bg-yellow-400/10 px-1 rounded">AU</span> : <span className="text-gray-700">—</span>}
-                        </td>
-                        <td className="px-4 py-2.5 text-right text-gray-300 font-mono text-xs">
-                          {p.indexData ? p.indexData.currentIndex.toFixed(0) : <span className="text-gray-700">—</span>}
-                        </td>
-                        <td className={`px-4 py-2.5 text-right font-mono text-xs font-semibold ${monthly != null ? (pos ? 'text-emerald-400' : 'text-red-400') : 'text-gray-700'}`}>
-                          {monthly != null ? `${pos ? '+' : ''}${(monthly * 100).toFixed(2)}%` : '—'}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </section>
-        );
-      })()}
+      {whatnotAmmo && whatnotAmmo.totalCards > 0 && (
+        <section className="border-l-2 border-yellow-500/40 pl-4">
+          <SectionHead label="Whatnot Ammo" />
+          <div className="flex gap-6 flex-wrap">
+            {[
+              { label: 'Total Cards', value: whatnotAmmo.totalCards, fmt: v => v,    color: 'text-yellow-400' },
+              { label: 'Total Value', value: whatnotAmmo.totalValue, fmt: fmtMoney,  color: 'text-gray-200' },
+              { label: 'Autos',       value: whatnotAmmo.autos,      fmt: v => v,    color: 'text-gray-400' },
+            ].map(m => (
+              <div key={m.label} className="flex flex-col min-w-0">
+                <span className="text-gray-600 text-xs uppercase tracking-widest leading-none mb-1">{m.label}</span>
+                <span className={`text-xl font-semibold font-mono leading-tight ${m.color}`}>{m.fmt(m.value)}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* ── Section 1: Portfolio Value Over Time ── */}
       <section>
