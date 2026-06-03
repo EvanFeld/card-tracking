@@ -1,9 +1,18 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import {
-  LineChart, Line, BarChart, Bar, Cell,
+  LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
+
+const SPORT_BLUES = {
+  baseball:   '#1d4ed8',
+  football:   '#3b82f6',
+  basketball: '#60a5fa',
+  hockey:     '#93c5fd',
+  other:      '#bfdbfe',
+};
+const WHATNOT_YELLOW = '#eab308';
 
 const BAR_COLORS = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444'];
 
@@ -147,26 +156,29 @@ function PlayerIndexCard({ data }) {
 }
 
 export default function AnalyticsView() {
-  const [portfolioHistory, setPortfolioHistory] = useState([]);
-  const [topPerformers,    setTopPerformers]    = useState([]);
-  const [bySport,          setBySport]          = useState([]);
-  const [salesPerf,        setSalesPerf]        = useState(null);
-  const [loading,          setLoading]          = useState(true);
-  const [playerIndex,      setPlayerIndex]      = useState([]);
+  const [portfolioHistory,   setPortfolioHistory]   = useState([]);
+  const [topPerformers,      setTopPerformers]      = useState([]);
+  const [salesPerf,          setSalesPerf]          = useState(null);
+  const [loading,            setLoading]            = useState(true);
+  const [portfolioBreakdown, setPortfolioBreakdown] = useState([]);
+  const [whatnotAmmo,        setWhatnotAmmo]        = useState(null);
+  const [playerIndex,        setPlayerIndex]        = useState([]);
   const [playerIndexLoading, setPlayerIndexLoading] = useState(true);
-  const [marketPulse,      setMarketPulse]      = useState([]);
+  const [marketPulse,        setMarketPulse]        = useState([]);
 
   useEffect(() => {
     Promise.all([
       axios.get('/api/analytics/portfolio-history'),
       axios.get('/api/analytics/top-performers'),
-      axios.get('/api/analytics/by-sport'),
       axios.get('/api/analytics/sales-performance'),
-    ]).then(([ph, tp, bs, sp]) => {
+      axios.get('/api/analytics/portfolio-breakdown'),
+      axios.get('/api/analytics/whatnot-ammo'),
+    ]).then(([ph, tp, sp, pb, wa]) => {
       setPortfolioHistory(ph.data);
       setTopPerformers(tp.data);
-      setBySport(bs.data);
       setSalesPerf(sp.data);
+      setPortfolioBreakdown(pb.data);
+      setWhatnotAmmo(wa.data);
     }).catch(console.error).finally(() => setLoading(false));
   }, []);
 
@@ -235,6 +247,71 @@ export default function AnalyticsView() {
           </div>
         )}
       </section>
+
+      {/* ── Whatnot Ammo Panel ── */}
+      {whatnotAmmo && whatnotAmmo.totalCards > 0 && (() => {
+        const indexByPlayer = {};
+        playerIndex.forEach(p => { indexByPlayer[p.player.toLowerCase()] = p; });
+        const enriched = (whatnotAmmo.byPlayer || []).map(p => ({
+          ...p,
+          indexData: indexByPlayer[p.player_name.trim().toLowerCase()] || null,
+        })).sort((a, b) => {
+          if (a.indexData && b.indexData) return b.indexData.currentIndex - a.indexData.currentIndex;
+          if (a.indexData) return -1;
+          if (b.indexData) return 1;
+          return 0;
+        });
+        return (
+          <section className="border-l-2 border-yellow-500/40 pl-4">
+            <SectionHead label="Whatnot Ammo" />
+            <div className="flex gap-6 flex-wrap mb-4">
+              {[
+                { label: 'Total Cards', value: whatnotAmmo.totalCards,  fmt: v => v,         color: 'text-yellow-400' },
+                { label: 'Total Value', value: whatnotAmmo.totalValue,  fmt: fmtMoney,        color: 'text-gray-200' },
+                { label: 'Autos',       value: whatnotAmmo.autos,       fmt: v => v,         color: 'text-gray-400' },
+              ].map(m => (
+                <div key={m.label} className="flex flex-col min-w-0">
+                  <span className="text-gray-600 text-xs uppercase tracking-widest leading-none mb-1">{m.label}</span>
+                  <span className={`text-xl font-semibold font-mono leading-tight ${m.color}`}>{m.fmt(m.value)}</span>
+                </div>
+              ))}
+            </div>
+            <div className="bg-[#161b27] border border-yellow-900/30 rounded-lg overflow-hidden">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-800">
+                    {['Player', 'Sport', 'Cards', 'Auto', 'Index', 'Monthly'].map((h, i) => (
+                      <th key={h} className={`text-[11px] text-gray-600 uppercase tracking-widest px-4 py-2.5 font-normal ${i === 0 ? 'text-left' : 'text-right'}`}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {enriched.map((p, i) => {
+                    const monthly = p.indexData?.percentChanges?.monthly;
+                    const pos = monthly >= 0;
+                    return (
+                      <tr key={i} className="border-b border-gray-800/40 hover:bg-white/[0.02] transition-colors">
+                        <td className="px-4 py-2.5 text-gray-200 font-medium">{p.player_name}</td>
+                        <td className="px-4 py-2.5 text-right text-gray-500 capitalize text-xs">{p.sport || '—'}</td>
+                        <td className="px-4 py-2.5 text-right text-gray-400 font-mono">{p.count}</td>
+                        <td className="px-4 py-2.5 text-right">
+                          {p.is_auto ? <span className="text-yellow-400 text-[10px] font-bold bg-yellow-400/10 px-1 rounded">AU</span> : <span className="text-gray-700">—</span>}
+                        </td>
+                        <td className="px-4 py-2.5 text-right text-gray-300 font-mono text-xs">
+                          {p.indexData ? p.indexData.currentIndex.toFixed(0) : <span className="text-gray-700">—</span>}
+                        </td>
+                        <td className={`px-4 py-2.5 text-right font-mono text-xs font-semibold ${monthly != null ? (pos ? 'text-emerald-400' : 'text-red-400') : 'text-gray-700'}`}>
+                          {monthly != null ? `${pos ? '+' : ''}${(monthly * 100).toFixed(2)}%` : '—'}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        );
+      })()}
 
       {/* ── Section 1: Portfolio Value Over Time ── */}
       <section>
@@ -323,39 +400,71 @@ export default function AnalyticsView() {
         )}
       </section>
 
-      {/* ── Section 3: Sport Breakdown ── */}
+      {/* ── Section 3: Portfolio Breakdown ── */}
       <section>
-        <SectionHead label="Sport Breakdown" />
-        {bySport.length === 0 ? (
-          <EmptyState msg="No sport data yet — assign sports to your owned cards" />
-        ) : (
-          <div className="bg-[#161b27] border border-gray-800 rounded-lg pt-4 pr-4 pb-2 pl-0">
-            <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={bySport} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1a2035" vertical={false} />
-                <XAxis
-                  dataKey="sport"
-                  tick={{ fill: '#4b5563', fontSize: 11 }}
-                  tickLine={false}
-                  axisLine={false}
-                />
-                <YAxis
-                  tick={{ fill: '#4b5563', fontSize: 10 }}
-                  tickLine={false}
-                  axisLine={false}
-                  tickFormatter={v => `$${v}`}
-                  width={60}
-                />
-                <Tooltip content={<DarkTooltip fmt={moneyFmt} />} />
-                <Bar dataKey="total_value" radius={[3, 3, 0, 0]}>
-                  {bySport.map((_, i) => (
-                    <Cell key={i} fill={BAR_COLORS[i % BAR_COLORS.length]} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        )}
+        <SectionHead label="Portfolio Breakdown" />
+        {portfolioBreakdown.length === 0 ? (
+          <EmptyState msg="Add cards with current values to see portfolio breakdown" />
+        ) : (() => {
+          const total = portfolioBreakdown.reduce((s, r) => s + (r.value || 0), 0);
+          return (
+            <div className="bg-[#161b27] border border-gray-800 rounded-lg p-4 flex gap-6 flex-wrap items-center">
+              <div className="flex-shrink-0">
+                <ResponsiveContainer width={240} height={240}>
+                  <PieChart>
+                    <Pie
+                      data={portfolioBreakdown}
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={100}
+                      dataKey="value"
+                      label={({ label, percent }) => percent > 0.05 ? label : ''}
+                      labelLine={{ stroke: '#374151', strokeWidth: 1 }}
+                    >
+                      {portfolioBreakdown.map((row, i) => (
+                        <Cell
+                          key={i}
+                          fill={row.type === 'whatnot' ? WHATNOT_YELLOW : (SPORT_BLUES[row.sport] || SPORT_BLUES.other)}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip content={({ active, payload }) => {
+                      if (!active || !payload?.length) return null;
+                      const d = payload[0].payload;
+                      const pct = total > 0 ? ((d.value / total) * 100).toFixed(1) : 0;
+                      return (
+                        <div className="bg-[#0f1117] border border-gray-700 rounded px-3 py-2 text-xs shadow-lg">
+                          <div className="text-gray-300 font-medium mb-1">{d.label}</div>
+                          <div className="text-gray-200 font-mono">{fmtMoney(d.value)}</div>
+                          <div className="text-gray-500">{d.count} card{d.count !== 1 ? 's' : ''} · {pct}%</div>
+                        </div>
+                      );
+                    }} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="flex flex-col gap-2 min-w-0">
+                {portfolioBreakdown.map((row, i) => {
+                  const color = row.type === 'whatnot' ? WHATNOT_YELLOW : (SPORT_BLUES[row.sport] || SPORT_BLUES.other);
+                  const pct = total > 0 ? ((row.value / total) * 100).toFixed(1) : 0;
+                  return (
+                    <div key={i} className="flex items-center gap-3">
+                      <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
+                      <span className="text-gray-400 text-sm w-28">{row.label}</span>
+                      <span className="text-gray-200 font-mono text-sm">{fmtMoney(row.value)}</span>
+                      <span className="text-gray-600 text-xs">{pct}%</span>
+                    </div>
+                  );
+                })}
+                <div className="mt-1 pt-2 border-t border-gray-800 flex items-center gap-3">
+                  <span className="w-2.5 h-2.5 flex-shrink-0" />
+                  <span className="text-gray-600 text-sm w-28">Total</span>
+                  <span className="text-gray-300 font-mono text-sm font-semibold">{fmtMoney(total)}</span>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
       </section>
 
       {/* ── Section 4: Sales Performance ── */}

@@ -4,7 +4,12 @@ import useCardStore from '../store/cardStore';
 const STATUS_PILL = {
   owned:     'text-emerald-400',
   sold:      'text-gray-600',
-  watchlist: 'text-yellow-500'
+  watchlist: 'text-yellow-500',
+  whatnot:   'text-yellow-400'
+};
+
+const STATUS_LABEL = {
+  whatnot: 'Whatnot'
 };
 
 const SPORT_ABBR = {
@@ -115,7 +120,9 @@ export default function CardTable() {
           )}
           {sorted.map((card, i) => {
             const pl = plData(card.purchase_price, card.current_value);
-            const rowBg = i % 2 === 0 ? 'bg-[#0f1117]' : 'bg-[#111620]';
+            const rowBg = card.status === 'whatnot'
+              ? (i % 2 === 0 ? 'bg-yellow-900/20' : 'bg-yellow-900/15')
+              : (i % 2 === 0 ? 'bg-[#0f1117]' : 'bg-[#111620]');
             return (
               <tr
                 key={card.id}
@@ -161,7 +168,7 @@ export default function CardTable() {
                 {/* Status */}
                 <td className="px-3 py-2">
                   <span className={`text-xs font-medium capitalize ${STATUS_PILL[card.status] || 'text-gray-500'}`}>
-                    {card.status}
+                    {STATUS_LABEL[card.status] || card.status}
                   </span>
                 </td>
               </tr>

@@ -3,8 +3,6 @@ const router  = express.Router();
 const db      = require('../db');
 
 // GET /api/analytics/portfolio-history
-// For each date in price_history, sums the most-recent price for every owned card
-// on or before that date → daily total portfolio value over time.
 router.get('/portfolio-history', (req, res) => {
   try {
     const rows = db.prepare(`
@@ -33,7 +31,6 @@ router.get('/portfolio-history', (req, res) => {
 });
 
 // GET /api/analytics/top-performers
-// Top 10 owned cards by unrealized P&L (current_value - purchase_price).
 router.get('/top-performers', (req, res) => {
   try {
     const rows = db.prepare(`
@@ -58,7 +55,6 @@ router.get('/top-performers', (req, res) => {
 });
 
 // GET /api/analytics/by-sport
-// Total current_value and card count grouped by sport for owned cards.
 router.get('/by-sport', (req, res) => {
   try {
     const rows = db.prepare(`
@@ -79,7 +75,6 @@ router.get('/by-sport', (req, res) => {
 });
 
 // GET /api/analytics/sales-performance
-// Aggregate stats across all sales_ledger entries.
 router.get('/sales-performance', (req, res) => {
   try {
     const row = db.prepare(`
@@ -95,6 +90,75 @@ router.get('/sales-performance', (req, res) => {
     res.json(row);
   } catch (err) {
     console.error('[analytics] sales-performance error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/analytics/portfolio-breakdown
+router.get('/portfolio-breakdown', (req, res) => {
+  try {
+    const sportRows = db.prepare(`
+      SELECT
+        sport,
+        ROUND(COALESCE(SUM(current_value), 0), 2) AS value,
+        COUNT(*) AS count,
+        'collection' AS type
+      FROM cards
+      WHERE status = 'owned'
+      GROUP BY sport
+    `).all().map(r => ({
+      ...r,
+      label: r.sport ? r.sport.charAt(0).toUpperCase() + r.sport.slice(1) : 'Other',
+      sport: r.sport || 'other',
+    }));
+
+    const whatnotRow = db.prepare(`
+      SELECT
+        ROUND(COALESCE(SUM(current_value), 0), 2) AS value,
+        COUNT(*) AS count
+      FROM cards
+      WHERE status = 'whatnot'
+    `).get();
+
+    const rows = [
+      ...sportRows,
+      { label: 'Whatnot Ammo', sport: null, value: whatnotRow.value, count: whatnotRow.count, type: 'whatnot' },
+    ].filter(r => r.value > 0 || r.count > 0);
+
+    res.json(rows);
+  } catch (err) {
+    console.error('[analytics] portfolio-breakdown error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/analytics/whatnot-ammo
+router.get('/whatnot-ammo', (req, res) => {
+  try {
+    const summary = db.prepare(`
+      SELECT
+        COUNT(*) AS totalCards,
+        ROUND(COALESCE(SUM(current_value), 0), 2) AS totalValue,
+        SUM(CASE WHEN is_auto = 1 THEN 1 ELSE 0 END) AS autos
+      FROM cards
+      WHERE status = 'whatnot'
+    `).get();
+
+    const byPlayer = db.prepare(`
+      SELECT
+        TRIM(player_name) AS player_name,
+        COUNT(*) AS count,
+        MAX(is_auto) AS is_auto,
+        sport
+      FROM cards
+      WHERE status = 'whatnot'
+      GROUP BY TRIM(player_name)
+      ORDER BY count DESC
+    `).all().map(p => ({ ...p, playerIndex: null }));
+
+    res.json({ ...summary, byPlayer });
+  } catch (err) {
+    console.error('[analytics] whatnot-ammo error:', err.message);
     res.status(500).json({ error: err.message });
   }
 });

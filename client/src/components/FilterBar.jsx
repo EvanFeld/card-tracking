@@ -71,6 +71,7 @@ export default function FilterBar({ onAdd }) {
         <option value="owned">Owned</option>
         <option value="sold">Sold</option>
         <option value="watchlist">Watchlist</option>
+        <option value="whatnot">Whatnot Ammo</option>
       </select>
 
       {activeCount > 0 && (

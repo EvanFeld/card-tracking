@@ -18,7 +18,14 @@ router.get('/summary', (req, res) => {
 
   const net = portfolioValue + totalEarned - totalSpent;
 
-  res.json({ portfolioValue, totalSpent, totalEarned, net });
+  const whatnotValue = db.prepare(
+    `SELECT COALESCE(SUM(current_value), 0) as val FROM cards WHERE status = 'whatnot'`
+  ).get().val;
+  const whatnotCount = db.prepare(
+    `SELECT COUNT(*) as val FROM cards WHERE status = 'whatnot'`
+  ).get().val;
+
+  res.json({ portfolioValue, totalSpent, totalEarned, net, whatnotValue, whatnotCount });
 });
 
 router.get('/', (req, res) => {

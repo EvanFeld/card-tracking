@@ -38,6 +38,12 @@ export default function SummaryBar() {
       value: fmtMoney(summary?.net),
       sub: 'value + earned − spent',
       color: summary?.net >= 0 ? 'text-emerald-400' : 'text-red-400'
+    },
+    {
+      label: 'Whatnot Ammo',
+      value: fmtMoney(summary?.whatnotValue),
+      sub: `${summary?.whatnotCount ?? 0} card${summary?.whatnotCount !== 1 ? 's' : ''}`,
+      color: 'text-yellow-400'
     }
   ];
 

@@ -386,6 +386,7 @@ export default function CardDrawer() {
                       <option value="owned">Owned</option>
                       <option value="sold">Sold</option>
                       <option value="watchlist">Watchlist</option>
+                      <option value="whatnot">Whatnot Ammo</option>
                     </select>
                   : <ReadVal val={data.status} cls="text-gray-300 capitalize" />}
               </Field>
