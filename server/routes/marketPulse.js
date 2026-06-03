@@ -4,13 +4,14 @@ const { getToken } = require('../services/firebaseAuth');
 
 const FIRESTORE_DOC = 'https://firestore.googleapis.com/v1/projects/cardladder-71d53/databases/(default)/documents/config/indexSnapshot';
 
-const SPORTS = ['baseball', 'basketball', 'football', 'hockey'];
+const SPORTS = ['baseball', 'basketball', 'football', 'hockey', 'soccer'];
 
 const SPORT_META = {
   baseball:   { label: 'Baseball',   emoji: '⚾' },
   basketball: { label: 'Basketball', emoji: '🏀' },
   football:   { label: 'Football',   emoji: '🏈' },
   hockey:     { label: 'Hockey',     emoji: '🏒' },
+  soccer:     { label: 'Soccer',     emoji: '⚽' },
 };
 
 function unwrapField(field) {
